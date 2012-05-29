@@ -70,7 +70,7 @@ class SqlIdentity(test.TestCase, test_backend.IdentityTests):
     def test_create_null_tenant_name(self):
         tenant = {'id': uuid.uuid4().hex,
                   'name': None}
-        self.assertRaises(exception.Conflict,
+        self.assertRaises(exception.ValidationError,
                           self.identity_api.create_tenant,
                           tenant['id'],
                           tenant)
@@ -93,6 +93,43 @@ class SqlIdentity(test.TestCase, test_backend.IdentityTests):
         #self.assertRaises(exception.RoleNotFound,
         #                  self.identity_api.get_role,
         #                  role['id'])
+
+    def test_delete_tenant_with_user_association(self):
+        user = {'id': 'fake',
+                'name': 'fakeuser',
+                'password': 'passwd'}
+        self.identity_api.create_user('fake', user)
+        self.identity_api.add_user_to_tenant(self.tenant_bar['id'],
+                                             user['id'])
+        self.identity_api.delete_tenant(self.tenant_bar['id'])
+        tenants = self.identity_api.get_tenants_for_user(user['id'])
+        self.assertEquals(tenants, [])
+
+    def test_delete_user_with_metadata(self):
+        user = {'id': 'fake',
+                'name': 'fakeuser',
+                'password': 'passwd'}
+        self.identity_api.create_user('fake', user)
+        self.identity_api.create_metadata(user['id'],
+                                          self.tenant_bar['id'],
+                                          {'extra': 'extra'})
+        self.identity_api.delete_user(user['id'])
+        metadata = self.identity_api.get_metadata(user['id'],
+                                                  self.tenant_bar['id'])
+        self.assertEquals(metadata, {})
+
+    def test_delete_tenant_with_metadata(self):
+        user = {'id': 'fake',
+                'name': 'fakeuser',
+                'password': 'passwd'}
+        self.identity_api.create_user('fake', user)
+        self.identity_api.create_metadata(user['id'],
+                                          self.tenant_bar['id'],
+                                          {'extra': 'extra'})
+        self.identity_api.delete_tenant(self.tenant_bar['id'])
+        metadata = self.identity_api.get_metadata(user['id'],
+                                                  self.tenant_bar['id'])
+        self.assertEquals(metadata, {})
 
 
 class SqlToken(test.TestCase, test_backend.TokenTests):
