@@ -24,6 +24,8 @@ from keystone import exception
 from keystone.identity.backends import sql as identity_sql
 from keystone import test
 from keystone.token.backends import sql as token_sql
+from keystone import policy
+from keystone.policy.backends import sql as policy_sql
 
 import default_fixtures
 import test_backend
@@ -132,6 +134,18 @@ class SqlIdentity(test.TestCase, test_backend.IdentityTests):
                           self.identity_api.get_metadata,
                           user['id'],
                           self.tenant_bar['id'])
+
+
+class SqlPolicy(test.TestCase, test_backend.PolicyTests):
+    def setup(self):
+        super(SqlPolicy, self).setup()
+        self.config([test.etcdir('keystone.conf.sample'),
+                     test.testsdir('test_override.conf'),
+                     test.testsdir('backend_sql.conf')])
+        sql_util.setup_test_database()
+        self.policy_api = policy_sql.Policy()
+        self.policy_man = policy.Manager()
+        self.load_fixtures(default_fixtures)
 
 
 class SqlToken(test.TestCase, test_backend.TokenTests):

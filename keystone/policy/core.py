@@ -18,6 +18,7 @@
 
 
 from keystone.common import manager
+from keystone.common import wsgi
 from keystone.common import controller
 from keystone import config
 from keystone import exception
@@ -144,3 +145,29 @@ class PolicyControllerV3(controller.V3Controller):
     def delete_policy(self, context, policy_id):
         self.assert_admin(context)
         return self.policy_api.delete_policy(context, policy_id)
+
+class AdminRouter(wsgi.ComposableRouter):
+    def add_routes(self,mapper):
+        policy_controller = PolicyControllerV3()
+        mapper.connect('/policy',
+                       controller=policy_controller,
+                       action='create_policy',
+                       condition=dict(method=['POST']))
+        mapper.connect('/policies',
+                       controller=policy_controller,
+                       action='list_policies',
+                       condition=dict(method=['GET']))
+        mapper.connect('/policy/{policy_id}',
+                       controller=policy_controller,
+                       action='get_policy',
+                       condition=dict(method=['GET']))
+        mapper.connect('/policy/{policy_id}',
+                       controller=policy_controller,
+                       action='update_policy',
+                       condition=dict(method=['POST']))
+        mapper.connect('/policy/{policy_id}',
+                       controller=policy_controller,
+                       action='delete_policy',
+                       condition=dict(method=['DELETE']))
+
+
