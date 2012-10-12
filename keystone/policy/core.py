@@ -15,17 +15,19 @@
 # under the License.
 
 """Main entry point into the Policy service."""
-
+import uuid
 
 from keystone.common import manager
 from keystone.common import wsgi
 from keystone.common import controller
+from keystone.common import logging
 from keystone import config
 from keystone import exception
 
 
 CONF = config.CONF
 
+LOG=logging.getLogger(__name__)
 
 class Manager(manager.Manager):
     """Default pivot point for the Policy backend.
@@ -146,9 +148,47 @@ class PolicyControllerV3(controller.V3Controller):
         self.assert_admin(context)
         return self.policy_api.delete_policy(context, policy_id)
 
+    def enforce(self,context, action, traget_object):
+        raise exception.NotImplemented
+
+class PolicyController(wsgi.Application):
+    def __init__(self):
+        self.poliy_api=Manager()
+        super(PolicyController,self).__init__()
+
+    def create_policy(self, context, policy):
+        policy = self._normalize_dict(policy)
+        LOG.debug('policy %s' % policy)
+        self.assert_admin(context)
+        policy_id = uuid.uuid4().hex
+
+        policy_ref=policy.copy()
+        policy_ref['id']=policy_id
+        new_policy=self.poliy_api.create_policy(
+            context, policy_id, policy_ref)
+
+    def list_policies(self, context,**kwargs):
+        self.assert_admin(context)
+        return {'policies': self.poliy_api.list_policies(context)}
+
+    def get_policy(self, context, policy_id):
+        self.assert_admin(context)
+        return {'policy': self.poliy_api.get_policy(context,
+                                              policy_id)}
+
+    def update_policy(self, context, policy_id, policy):
+        self.assert_admin(context)
+        policy_ref = self.poliy_api.update_policy(context,
+                                     policy_id, policy)
+        return {'policy': policy_ref}
+
+    def delete_policy(self, context, policy_id):
+        self.assert_admin(context)
+        self.poliy_api.delete_policy(context, policy_id)
+
 class AdminRouter(wsgi.ComposableRouter):
     def add_routes(self,mapper):
-        policy_controller = PolicyControllerV3()
+        policy_controller = PolicyController()
         mapper.connect('/policy',
                        controller=policy_controller,
                        action='create_policy',
@@ -169,5 +209,8 @@ class AdminRouter(wsgi.ComposableRouter):
                        controller=policy_controller,
                        action='delete_policy',
                        condition=dict(method=['DELETE']))
-
+        mapper.connect('/policy',
+                       controller=policy_controller,
+                       action='enforce',
+                       condition=dict(method=['HEAD']))
 
