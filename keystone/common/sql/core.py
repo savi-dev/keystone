@@ -67,7 +67,7 @@ class DictBase(object):
     @classmethod
     def from_dict(cls, d):
         new_dict = d.copy()
-        new_dict['extra'] = dict((k,d.pop(k)) for k in d.iterkeys()
+        new_dict['extra'] = dict((k,new_dict.pop(k)) for k in d.iterkeys()
                                  if k not in cls.attributes and k!='extra')
         return cls(**new_dict)
 

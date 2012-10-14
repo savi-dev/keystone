@@ -158,14 +158,22 @@ class PolicyController(wsgi.Application):
 
     def create_policy(self, context, policy):
         policy = self._normalize_dict(policy)
-        LOG.debug('policy %s' % policy)
         self.assert_admin(context)
+        if not 'endpoint_id' in policy or not policy['endpoint_id']:
+            msg = "endpoint_id is required and can't be empty"
+            raise exception.ValidationError(message=msg)
+        if not 'blob' in policy or not policy['blob']:
+            msg = "blob is required and can't be empty"
+            raise exception.ValidationError(message=msg)
+        if not 'type' in policy or not policy['type']:
+            msg = "type is required and can't be empty"
+            raise exception.ValidationError(message=msg)
         policy_id = uuid.uuid4().hex
-
         policy_ref=policy.copy()
         policy_ref['id']=policy_id
         new_policy=self.poliy_api.create_policy(
             context, policy_id, policy_ref)
+        return {'policy': policy_ref}
 
     def list_policies(self, context,**kwargs):
         self.assert_admin(context)
@@ -180,37 +188,11 @@ class PolicyController(wsgi.Application):
         self.assert_admin(context)
         policy_ref = self.poliy_api.update_policy(context,
                                      policy_id, policy)
+
         return {'policy': policy_ref}
 
     def delete_policy(self, context, policy_id):
         self.assert_admin(context)
         self.poliy_api.delete_policy(context, policy_id)
 
-class AdminRouter(wsgi.ComposableRouter):
-    def add_routes(self,mapper):
-        policy_controller = PolicyController()
-        mapper.connect('/policy',
-                       controller=policy_controller,
-                       action='create_policy',
-                       condition=dict(method=['POST']))
-        mapper.connect('/policies',
-                       controller=policy_controller,
-                       action='list_policies',
-                       condition=dict(method=['GET']))
-        mapper.connect('/policy/{policy_id}',
-                       controller=policy_controller,
-                       action='get_policy',
-                       condition=dict(method=['GET']))
-        mapper.connect('/policy/{policy_id}',
-                       controller=policy_controller,
-                       action='update_policy',
-                       condition=dict(method=['POST']))
-        mapper.connect('/policy/{policy_id}',
-                       controller=policy_controller,
-                       action='delete_policy',
-                       condition=dict(method=['DELETE']))
-        mapper.connect('/policy',
-                       controller=policy_controller,
-                       action='enforce',
-                       condition=dict(method=['HEAD']))
 

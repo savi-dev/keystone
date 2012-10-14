@@ -17,6 +17,7 @@
 from keystone import catalog
 from keystone.common import wsgi
 from keystone import identity
+from keystone import policy
 
 
 class CrudExtension(wsgi.ExtensionRouter):
@@ -32,6 +33,33 @@ class CrudExtension(wsgi.ExtensionRouter):
         role_controller = identity.RoleController()
         service_controller = catalog.ServiceController()
         endpoint_controller = catalog.EndpointController()
+        policy_controller = policy.PolicyController()
+
+        # Policy Operations
+        mapper.connect('/policies',
+                       controller=policy_controller,
+                       action='create_policy',
+                       conditions=dict(method=['POST']))
+        mapper.connect('/policies',
+                       controller=policy_controller,
+                       action='list_policies',
+                       conditions=dict(method=['GET']))
+        mapper.connect('/policies/{policy_id}',
+                       controller=policy_controller,
+                       action='get_policy',
+                       conditions=dict(method=['GET']))
+        mapper.connect('/policies/{policy_id}',
+                       controller=policy_controller,
+                       action='update_policy',
+                       conditions=dict(method=['POST']))
+        mapper.connect('/policies/{policy_id}',
+                       controller=policy_controller,
+                       action='delete_policy',
+                       conditions=dict(method=['DELETE']))
+        mapper.connect('/policies',
+                       controller=policy_controller,
+                       action='enforce',
+                       conditions=dict(method=['HEAD']))
 
         # Tenant Operations
         mapper.connect(

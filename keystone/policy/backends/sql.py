@@ -4,25 +4,13 @@ Created on Oct 9, 2012
 @author: Mohammad Faraji <ms.faraji@utoronto.ca>
 '''
 
-import functools
 import sqlalchemy
 
 from keystone.common import sql
 from keystone.common.sql import migration
 from keystone import exception
-from keystone.policy.backends import rules
+from keystone import policy
 
-def handle_conflicts(type='object'):
-
-    def decorator(method):
-        @functools.wraps(method)
-        def wrapper(*args,**kwargs):
-            try:
-                method(*args,**kwargs)
-            except sql.IntegrityError as e:
-                raise exception.Conflict(type=type, details=str(e))
-        return wrapper
-    return decorator
 
 class PolicyModel(sql.ModelBase, sql.DictBase):
     __tablename__='policy'
@@ -33,12 +21,12 @@ class PolicyModel(sql.ModelBase, sql.DictBase):
     extra = sql.Column(sql.JsonBlob())
     attributes =['id','endpoint_id','blob', 'type']
 
-class Policy(sql.Base, rules.Policy):
+class Policy(sql.Base, policy.Driver):
     def sync_db(self):
         migration.db_sync()
 
-    @handle_conflicts(type='policy')
     def create_policy(self, policy_id, policy):
+        """ Creating a new policy"""
         session = self.get_session()
         with session.begin():
             policy_ref = PolicyModel.from_dict(policy)
@@ -52,6 +40,7 @@ class Policy(sql.Base, rules.Policy):
         return [ref.to_dict() for ref in refs]
 
     def get_policy(self, policy_id):
+        """ Getting a policy details"""
         session =self.get_session()
         try:
             policy_ref = session.query(PolicyModel).filter_by(id=policy_id).first()
@@ -59,8 +48,8 @@ class Policy(sql.Base, rules.Policy):
             raise exception.PolicyNotFound(policy_id=policy_id)
         return policy_ref.to_dict()
 
-    @handle_conflicts(type='policy')
     def update_policy(self, policy_id, policy):
+        """ Updating a policy"""
         session =self.get_session()
         try:
             ref = session.query(PolicyModel).filter_by(id=policy_id).one()
@@ -69,9 +58,11 @@ class Policy(sql.Base, rules.Policy):
         former = ref.to_dict()
         former.update(policy)
         new = PolicyModel.from_dict(former)
-        ref.endpoit_id = new.endpoint_id
+        ref.endpoint_id = new.endpoint_id
         ref.type = new.type
         ref.blob = new.blob
         ref.extra = new.extra
         session.flush()
         return ref.to_dict()
+
+    def enforce(self, context):

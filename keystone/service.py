@@ -261,8 +261,7 @@ class AdminRouter(wsgi.ComposingRouter):
                        action='get_extension_info',
                        conditions=dict(method=['GET']))
         identity_router = identity.AdminRouter()
-        policy_router = policy.AdminRouter()
-        routers = [identity_router, policy_router]
+        routers = [identity_router]
         super(AdminRouter, self).__init__(mapper, routers)
 
 
