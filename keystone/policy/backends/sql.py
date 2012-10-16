@@ -64,5 +64,3 @@ class Policy(sql.Base, policy.Driver):
         ref.extra = new.extra
         session.flush()
         return ref.to_dict()
-
-    def enforce(self, context):
