@@ -9,7 +9,7 @@ import sqlalchemy
 from keystone.common import sql
 from keystone.common.sql import migration
 from keystone import exception
-from keystone import policy
+from keystone.policy.backends import rules
 
 
 class PolicyModel(sql.ModelBase, sql.DictBase):
@@ -21,7 +21,7 @@ class PolicyModel(sql.ModelBase, sql.DictBase):
     extra = sql.Column(sql.JsonBlob())
     attributes =['id','endpoint_id','blob', 'type']
 
-class Policy(sql.Base, policy.Driver):
+class Policy(sql.Base, rules.Policy):
     def sync_db(self):
         migration.db_sync()
 
