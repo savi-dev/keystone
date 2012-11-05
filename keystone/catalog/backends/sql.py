@@ -20,10 +20,10 @@ from keystone.common import sql
 from keystone.common.sql import migration
 from keystone import config
 from keystone import exception
-
+import logging
 
 CONF = config.CONF
-
+LOG=logging.getLogger(__name__)
 
 class Service(sql.ModelBase, sql.DictBase):
     __tablename__ = 'service'
@@ -100,21 +100,33 @@ class Catalog(sql.Base, catalog.Driver):
 
     def create_service(self, service_id, service_ref):
         session = self.get_session()
+        services_copy = session.query(Service).filter_by(type=service_ref['type']).all()
+        msg = "You can not have a service with same type and name"
+        for service in services_copy:
+            service_dict=service.to_dict()
+            LOG.debug("This is dict %s" % service_dict)
+            if service_dict['name'] == service_ref['name']:
+                raise exception.Conflict(type='service', details=msg)
         with session.begin():
             service = Service.from_dict(service_ref)
             session.add(service)
             session.flush()
         return service.to_dict()
-
     # Endpoints
     def create_endpoint(self, endpoint_id, endpoint_ref):
         session = self.get_session()
         self.get_service(endpoint_ref['service_id'])
         new_endpoint = Endpoint.from_dict(endpoint_ref)
+        msg="You can not have same endpoint for the same service on same region"
+        endpoint_copy = session.query(Endpoint).filter_by(service_id=endpoint_ref['service_id'],
+                                                          region=endpoint_ref['region']).first()
+        if endpoint_copy:
+            raise exception.Conflict(type='endpoint', details=msg)
         with session.begin():
             session.add(new_endpoint)
             session.flush()
         return new_endpoint.to_dict()
+
 
     def delete_endpoint(self, endpoint_id):
         session = self.get_session()
