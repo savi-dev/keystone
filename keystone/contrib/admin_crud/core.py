@@ -13,7 +13,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
 from keystone import catalog
 from keystone.common import wsgi
 from keystone import identity
@@ -28,6 +27,7 @@ class CrudExtension(wsgi.ExtensionRouter):
     """
 
     def add_routes(self, mapper):
+<<<<<<< .merge_file_My5Br3
         tenant_controller = identity.TenantController()
         user_controller = identity.UserController()
         role_controller = identity.RoleController()
@@ -56,10 +56,12 @@ class CrudExtension(wsgi.ExtensionRouter):
                        controller=policy_controller,
                        action='delete_policy',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/policies',
-                       controller=policy_controller,
-                       action='enforce',
-                       conditions=dict(method=['HEAD']))
+
+        tenant_controller = identity.controllers.Tenant()
+        user_controller = identity.controllers.User()
+        role_controller = identity.controllers.Role()
+        service_controller = catalog.controllers.Service()
+        endpoint_controller = catalog.controllers.Endpoint()
 
         # Tenant Operations
         mapper.connect(

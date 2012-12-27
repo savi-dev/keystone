@@ -20,8 +20,6 @@ from keystone import config
 from keystone.identity.backends import pam as identity_pam
 from keystone import test
 
-import default_fixtures
-
 
 CONF = config.CONF
 
@@ -42,8 +40,8 @@ class PamIdentity(test.TestCase):
         self.assertDictEqual(self.tenant_in, tenant_out)
 
     def test_get_tenant_by_name(self):
-        tenant_out = self.identity_api.\
-            get_tenant_by_name(self.tenant_in['name'])
+        tenant_in_name = self.tenant_in['name']
+        tenant_out = self.identity_api.get_tenant_by_name(tenant_in_name)
         self.assertDictEqual(self.tenant_in, tenant_out)
 
     def test_get_user(self):

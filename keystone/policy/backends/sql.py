@@ -1,10 +1,4 @@
-'''
-Created on Oct 9, 2012
-
-@author: Mohammad Faraji <ms.faraji@utoronto.ca>
-'''
-
-import sqlalchemy
+import functools
 
 from keystone.common import sql
 from keystone.common.sql import migration
@@ -12,55 +6,83 @@ from keystone import exception
 from keystone.policy.backends import rules
 
 
+def handle_conflicts(type='object'):
+    """Converts IntegrityError into HTTP 409 Conflict."""
+    def decorator(method):
+        @functools.wraps(method)
+        def wrapper(*args, **kwargs):
+            try:
+                return method(*args, **kwargs)
+            except sql.IntegrityError as e:
+                raise exception.Conflict(type=type, details=str(e))
+        return wrapper
+    return decorator
+
+
 class PolicyModel(sql.ModelBase, sql.DictBase):
-    __tablename__='policy'
-    id = sql.Column(sql.String(64),primary_key=True)
-    endpoint_id = sql.Column(sql.String(64), nullable=False)
-    blob = sql.Column(sql.JsonBlob(),nullable=False)
+    __tablename__ = 'policy'
+    attributes = ['id', 'blob', 'type']
+    id = sql.Column(sql.String(64), primary_key=True)
+    blob = sql.Column(sql.JsonBlob(), nullable=False)
     type = sql.Column(sql.String(255), nullable=False)
     extra = sql.Column(sql.JsonBlob())
-    attributes =['id','endpoint_id','blob', 'type']
+
 
 class Policy(sql.Base, rules.Policy):
-    def sync_db(self):
+    # Internal interface to manage the database
+    def db_sync(self):
         migration.db_sync()
 
+    @handle_conflicts(type='policy')
     def create_policy(self, policy_id, policy):
-        """ Creating a new policy"""
         session = self.get_session()
+
         with session.begin():
-            policy_ref = PolicyModel.from_dict(policy)
-            session.add(policy_ref)
+            ref = PolicyModel.from_dict(policy)
+            session.add(ref)
             session.flush()
-        return policy_ref.to_dict()
+
+        return ref.to_dict()
 
     def list_policies(self):
         session = self.get_session()
+
         refs = session.query(PolicyModel).all()
         return [ref.to_dict() for ref in refs]
 
-    def get_policy(self, policy_id):
-        """ Getting a policy details"""
-        session =self.get_session()
+    def _get_policy(self, session, policy_id):
+        """Private method to get a policy model object (NOT a dictionary)."""
         try:
-            policy_ref = session.query(PolicyModel).filter_by(id=policy_id).first()
-        except sqlalchemy.orm.exc.NoResultFound:
+            return session.query(PolicyModel).filter_by(id=policy_id).one()
+        except sql.NotFound:
             raise exception.PolicyNotFound(policy_id=policy_id)
-        return policy_ref.to_dict()
 
+    def get_policy(self, policy_id):
+        session = self.get_session()
+
+        return self._get_policy(session, policy_id).to_dict()
+
+    @handle_conflicts(type='policy')
     def update_policy(self, policy_id, policy):
-        """ Updating a policy"""
-        session =self.get_session()
-        try:
-            ref = session.query(PolicyModel).filter_by(id=policy_id).one()
-        except sqlalchemy.orm.exc.NoResultFound:
-            raise exception.PolicyNotFound(policy_id=policy_id)
-        former = ref.to_dict()
-        former.update(policy)
-        new = PolicyModel.from_dict(former)
-        ref.endpoint_id = new.endpoint_id
-        ref.type = new.type
-        ref.blob = new.blob
-        ref.extra = new.extra
-        session.flush()
+        session = self.get_session()
+
+        with session.begin():
+            ref = self._get_policy(session, policy_id)
+            old_dict = ref.to_dict()
+            old_dict.update(policy)
+            new_policy = PolicyModel.from_dict(old_dict)
+            ref.blob = new_policy.blob
+            ref.type = new_policy.type
+            ref.extra = new_policy.extra
+            session.flush()
+
         return ref.to_dict()
+
+    def delete_policy(self, policy_id):
+        session = self.get_session()
+
+        with session.begin():
+            ref = self._get_policy(session, policy_id)
+            session.delete(ref)
+            session.flush()
+
