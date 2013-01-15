@@ -16,7 +16,7 @@
 from keystone import catalog
 from keystone.common import wsgi
 from keystone import identity
-from keystone import policy
+from keystone.policy.controllers import Policy
 
 
 class CrudExtension(wsgi.ExtensionRouter):
@@ -32,30 +32,30 @@ class CrudExtension(wsgi.ExtensionRouter):
         role_controller = identity.controllers.Role()
         service_controller = catalog.controllers.Service()
         endpoint_controller = catalog.controllers.Endpoint()
-
-#        policy_controller = policy.PolicyController()
+    
+        policy_controller = Policy()
 #
-#        # Policy Operations
-#        mapper.connect('/policies',
-#                       controller=policy_controller,
-#                       action='create_policy',
-#                       conditions=dict(method=['POST']))
-#        mapper.connect('/policies',
-#                       controller=policy_controller,
-#                       action='list_policies',
-#                       conditions=dict(method=['GET']))
-#        mapper.connect('/policies/{policy_id}',
-#                       controller=policy_controller,
-#                       action='get_policy',
-#                       conditions=dict(method=['GET']))
-#        mapper.connect('/policies/{policy_id}',
-#                       controller=policy_controller,
-#                       action='update_policy',
-#                       conditions=dict(method=['POST']))
-#        mapper.connect('/policies/{policy_id}',
-#                       controller=policy_controller,
-#                       action='delete_policy',
-#                       conditions=dict(method=['DELETE']))
+        # Policy Operations
+        mapper.connect('/policies',
+                       controller=policy_controller,
+                       action='create_policy',
+                       conditions=dict(method=['POST']))
+        mapper.connect('/policies',
+                       controller=policy_controller,
+                       action='list_policies',
+                       conditions=dict(method=['GET']))
+        mapper.connect('/policies/{policy_id}',
+                       controller=policy_controller,
+                       action='get_policy',
+                       conditions=dict(method=['GET']))
+        mapper.connect('/policies/{policy_id}',
+                       controller=policy_controller,
+                       action='update_policy',
+                       conditions=dict(method=['POST']))
+        mapper.connect('/policies/{policy_id}',
+                       controller=policy_controller,
+                       action='delete_policy',
+                       conditions=dict(method=['DELETE']))
 
         
         # Tenant Operations

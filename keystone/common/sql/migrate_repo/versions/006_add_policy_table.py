@@ -21,12 +21,16 @@ import sqlalchemy as sql
 def upgrade(migrate_engine):
     meta = sql.MetaData()
     meta.bind = migrate_engine
-
+    tenant_table = sql.Table('tenant', meta, autoload=True)
     policy_table = sql.Table(
         'policy',
         meta,
         sql.Column('id', sql.String(64), primary_key=True),
         sql.Column('type', sql.String(255), nullable=False),
+         sql.Column('tenant_id',
+                   sql.String(64),
+                   sql.ForeignKey('tenant.id'),
+                   nullable=False),
         sql.Column('blob', sql.Text(), nullable=False),
         sql.Column('extra', sql.Text()))
     policy_table.create(migrate_engine, checkfirst=True)

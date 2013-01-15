@@ -21,10 +21,13 @@ def handle_conflicts(type='object'):
 
 class PolicyModel(sql.ModelBase, sql.DictBase):
     __tablename__ = 'policy'
-    attributes = ['id', 'blob', 'type']
+    attributes = ['id', 'blob', 'type','tenant_id']
     id = sql.Column(sql.String(64), primary_key=True)
     blob = sql.Column(sql.JsonBlob(), nullable=False)
     type = sql.Column(sql.String(255), nullable=False)
+    tenant_id = sql.Column(sql.String(64),
+                            sql.ForeignKey('tenant.id'),
+                            nullable=False)
     extra = sql.Column(sql.JsonBlob())
 
 
@@ -61,6 +64,13 @@ class Policy(sql.Base, rules.Policy):
         session = self.get_session()
 
         return self._get_policy(session, policy_id).to_dict()
+
+    def get_tenant_policy(self, tenant_id):
+        session = self.get_session()
+        try:
+            return session.query(PolicyModel).filter_by(tenant_id=tenant_id).one().to_dict()
+        except sql.NotFound:
+            return None
 
     @handle_conflicts(type='policy')
     def update_policy(self, policy_id, policy):

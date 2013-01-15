@@ -43,6 +43,10 @@ class Manager(manager.Manager):
             return self.driver.get_policy(policy_id)
         except exception.NotFound:
             raise exception.PolicyNotFound(policy_id=policy_id)
+        
+        
+    def get_tenant_policy(self, context, tenant_id):
+        return self.driver.get_tenant_policy(tenant_id)
 
     def update_policy(self, context, policy_id, policy):
         if 'id' in policy and policy_id != policy['id']:
@@ -82,6 +86,14 @@ class Driver(object):
 
     def get_policy(self, policy_id):
         """Retrieve a specific policy blob.
+
+        :raises: keystone.exception.PolicyNotFound
+
+        """
+        raise exception.NotImplemented()
+
+    def get_tenant_policy(self, tenant_id):
+        """Retrieve a policy blob for a specific tenant.
 
         :raises: keystone.exception.PolicyNotFound
 

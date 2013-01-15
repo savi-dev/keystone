@@ -19,7 +19,7 @@ class ExternalAuthNotApplicable(Exception):
     pass
 
 
-@dependency.requires('catalog_api')
+@dependency.requires('catalog_api','policy_api')
 class Auth(controller.V2Controller):
     def ca_cert(self, context, auth=None):
         ca_file = open(config.CONF.signing.ca_certs, 'r')
@@ -95,6 +95,9 @@ class Auth(controller.V2Controller):
                 user_id=user_ref['id'],
                 tenant_id=tenant_ref['id'],
                 metadata=metadata_ref)
+            policy = self.policy_api.get_tenant_policy(
+                context=context,
+                tenant_id=tenant_ref['id'])
         else:
             catalog_ref = {}
 
@@ -108,8 +111,11 @@ class Auth(controller.V2Controller):
         token_data = Auth.format_token(auth_token_data, roles_ref)
 
         service_catalog = Auth.format_catalog(catalog_ref)
+        LOG.debug("This is policy %s" % policy)
+        policy_ref = {'policy':{'id':policy['id']}}
+        LOG.debug("This is policy %s" % policy_ref)
         token_data['access']['serviceCatalog'] = service_catalog
-
+        token_data['access']['policy']=policy_ref
         if config.CONF.signing.token_format == 'UUID':
             token_id = uuid.uuid4().hex
         elif config.CONF.signing.token_format == 'PKI':
