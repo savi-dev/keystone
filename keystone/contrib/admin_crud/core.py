@@ -27,42 +27,37 @@ class CrudExtension(wsgi.ExtensionRouter):
     """
 
     def add_routes(self, mapper):
-<<<<<<< .merge_file_My5Br3
-        tenant_controller = identity.TenantController()
-        user_controller = identity.UserController()
-        role_controller = identity.RoleController()
-        service_controller = catalog.ServiceController()
-        endpoint_controller = catalog.EndpointController()
-        policy_controller = policy.PolicyController()
-
-        # Policy Operations
-        mapper.connect('/policies',
-                       controller=policy_controller,
-                       action='create_policy',
-                       conditions=dict(method=['POST']))
-        mapper.connect('/policies',
-                       controller=policy_controller,
-                       action='list_policies',
-                       conditions=dict(method=['GET']))
-        mapper.connect('/policies/{policy_id}',
-                       controller=policy_controller,
-                       action='get_policy',
-                       conditions=dict(method=['GET']))
-        mapper.connect('/policies/{policy_id}',
-                       controller=policy_controller,
-                       action='update_policy',
-                       conditions=dict(method=['POST']))
-        mapper.connect('/policies/{policy_id}',
-                       controller=policy_controller,
-                       action='delete_policy',
-                       conditions=dict(method=['DELETE']))
-
         tenant_controller = identity.controllers.Tenant()
         user_controller = identity.controllers.User()
         role_controller = identity.controllers.Role()
         service_controller = catalog.controllers.Service()
         endpoint_controller = catalog.controllers.Endpoint()
 
+#        policy_controller = policy.PolicyController()
+#
+#        # Policy Operations
+#        mapper.connect('/policies',
+#                       controller=policy_controller,
+#                       action='create_policy',
+#                       conditions=dict(method=['POST']))
+#        mapper.connect('/policies',
+#                       controller=policy_controller,
+#                       action='list_policies',
+#                       conditions=dict(method=['GET']))
+#        mapper.connect('/policies/{policy_id}',
+#                       controller=policy_controller,
+#                       action='get_policy',
+#                       conditions=dict(method=['GET']))
+#        mapper.connect('/policies/{policy_id}',
+#                       controller=policy_controller,
+#                       action='update_policy',
+#                       conditions=dict(method=['POST']))
+#        mapper.connect('/policies/{policy_id}',
+#                       controller=policy_controller,
+#                       action='delete_policy',
+#                       conditions=dict(method=['DELETE']))
+
+        
         # Tenant Operations
         mapper.connect(
             '/tenants',

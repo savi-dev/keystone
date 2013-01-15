@@ -99,7 +99,6 @@ class DictBase(object):
             d['extra'] = self.extra.copy()
 
         return d
->>>>>>> .merge_file_bUxPZU
 
     def __setitem__(self, key, value):
         setattr(self, key, value)

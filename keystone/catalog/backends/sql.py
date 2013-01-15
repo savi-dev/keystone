@@ -109,11 +109,11 @@ class Catalog(sql.Base, catalog.Driver):
         session = self.get_session()
         self.get_service(endpoint_ref['service_id'])
         new_endpoint = Endpoint.from_dict(endpoint_ref)
-        msg="You can not have same endpoint for the same service on same region"
-        endpoint_copy = session.query(Endpoint).filter_by(service_id=endpoint_ref['service_id'],
-                                                          region=endpoint_ref['region']).first()
-        if endpoint_copy:
-            raise exception.Conflict(type='endpoint', details=msg)
+        #msg="You can not have same endpoint for the same service on same region"
+        #endpoint_copy = session.query(Endpoint).filter_by(service_id=endpoint_ref['service_id'],
+        #                                                  region=endpoint_ref['region']).first()
+        #if endpoint_copy:
+        #    raise exception.Conflict(type='endpoint', details=msg)
         with session.begin():
             session.add(new_endpoint)
             session.flush()
