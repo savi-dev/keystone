@@ -68,7 +68,7 @@ class Policy(sql.Base, rules.Policy):
     def get_tenant_policy(self, tenant_id):
         session = self.get_session()
         try:
-            return session.query(PolicyModel).filter_by(tenant_id=tenant_id).one().to_dict()
+            return [policy.to_dict() for policy in session.query(PolicyModel).filter_by(tenant_id=tenant_id)]
         except sql.NotFound:
             return None
 

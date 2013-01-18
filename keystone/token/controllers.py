@@ -95,7 +95,7 @@ class Auth(controller.V2Controller):
                 user_id=user_ref['id'],
                 tenant_id=tenant_ref['id'],
                 metadata=metadata_ref)
-            policy = self.policy_api.get_tenant_policy(
+            policies = self.policy_api.get_tenant_policy(
                 context=context,
                 tenant_id=tenant_ref['id'])
         else:
@@ -111,8 +111,8 @@ class Auth(controller.V2Controller):
         token_data = Auth.format_token(auth_token_data, roles_ref)
 
         service_catalog = Auth.format_catalog(catalog_ref)
-        LOG.debug("This is policy %s" % policy)
-        policy_ref = {'policy':{'id':policy['id']}}
+        LOG.debug("This is policy %s" % policies)
+        policy_ref = {'policy':policies}
         LOG.debug("This is policy %s" % policy_ref)
         token_data['access']['serviceCatalog'] = service_catalog
         token_data['access']['policy']=policy_ref
