@@ -49,7 +49,7 @@ class Policy(controller.V2Controller):
     def get_tenant_policy(self, context, tenant_id):
         self.assert_admin(context)
         ref = self.policy_api.get_tenant_policy(context, tenant_id)
-        return {'policy':ref}
+        return {'policies':ref}
     
     def list_policies(self, context):
          if 'name' in context['query_string']:
@@ -57,7 +57,7 @@ class Policy(controller.V2Controller):
                 context, context['query_string'].get('name'))
          self.assert_admin(context)
          refs = self.policy_api.list_policies(context)
-         return {'policy':refs}
+         return {'policies':refs}
     
     def update_policy(self, context, policy_id, policy):
         self.assert_admin(context)
