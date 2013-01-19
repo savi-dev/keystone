@@ -32,7 +32,7 @@ class CrudExtension(wsgi.ExtensionRouter):
         role_controller = identity.controllers.Role()
         service_controller = catalog.controllers.Service()
         endpoint_controller = catalog.controllers.Endpoint()
-    
+
         policy_controller = Policy()
 #
         # Policy Operations
@@ -56,12 +56,12 @@ class CrudExtension(wsgi.ExtensionRouter):
                        controller=policy_controller,
                        action='delete_policy',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/policies/tenant/{tenant_id}',
+        mapper.connect('/policies/role/{role_id}',
                        controller=policy_controller,
-                       action='get_tenant_policy',
+                       action='get_role_policy',
                        conditions=dict(method=['GET']))
 
-        
+
         # Tenant Operations
         mapper.connect(
             '/tenants',

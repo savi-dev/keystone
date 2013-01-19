@@ -21,7 +21,7 @@ from keystone.common import logging
 
 LOG = logging.getLogger(__name__)
 class Policy(controller.V2Controller):
-    
+
     def create_policy(self, context, policy):
         policy = self._normalize_dict(policy)
         self.assert_admin(context)
@@ -31,26 +31,26 @@ class Policy(controller.V2Controller):
         if not 'type' in policy or not policy['type']:
             msg = 'type field is required and cannot be empty'
             raise exception.ValidationError(message=msg)
-        if not 'tenant_id' in policy or not policy['tenant_id']:
-            msg = 'tenantId field is required and cannot be empty'
+        if not 'role_id' in policy or not policy['role_id']:
+            msg = 'role-id field is required and cannot be empty'
             raise exception.ValidationError(message=msg)
         policy_id = uuid.uuid4().hex
         policy_ref = policy.copy()
         policy_ref['id'] = policy_id
-        
+
         ref = self.policy_api.create_policy(context, policy_ref['id'], policy_ref)
-        return {'policy':policy_ref}
-    
+        return {'policy':ref}
+
     def get_policy(self,context, policy_id):
         self.assert_admin(context)
         ref = self.policy_api.get_policy(context, policy_id)
         return {'policy':ref}
-    
-    def get_tenant_policy(self, context, tenant_id):
+
+    def get_role_policy(self, context, role_id):
         self.assert_admin(context)
-        ref = self.policy_api.get_tenant_policy(context, tenant_id)
+        ref = self.policy_api.get_role_policy(context, role_id)
         return {'policies':ref}
-    
+
     def list_policies(self, context):
          if 'name' in context['query_string']:
             return self.get_user_by_name(
@@ -58,12 +58,12 @@ class Policy(controller.V2Controller):
          self.assert_admin(context)
          refs = self.policy_api.list_policies(context)
          return {'policies':refs}
-    
+
     def update_policy(self, context, policy_id, policy):
         self.assert_admin(context)
         ref = self.policy_api.update_policy(context, policy_id, policy)
         return {'policy': ref}
-    
+
     def delete_policy(self, context, policy_id):
         self.assert_admin(context)
         return self.policy_api.delete_policy(context, policy_id)

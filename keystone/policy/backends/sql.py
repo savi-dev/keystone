@@ -21,13 +21,14 @@ def handle_conflicts(type='object'):
 
 class PolicyModel(sql.ModelBase, sql.DictBase):
     __tablename__ = 'policy'
-    attributes = ['id', 'blob', 'type','tenant_id']
+    attributes = ['id', 'blob', 'type','role_id']
     id = sql.Column(sql.String(64), primary_key=True)
     blob = sql.Column(sql.JsonBlob(), nullable=False)
     type = sql.Column(sql.String(255), nullable=False)
-    tenant_id = sql.Column(sql.String(64),
-                            sql.ForeignKey('tenant.id'),
-                            nullable=False)
+    role_id = sql.Column(sql.String(64),
+                            sql.ForeignKey('role.id'),
+                            nullable=False),
+    timestamp = sql.Column('expires', sql.DateTime()),
     extra = sql.Column(sql.JsonBlob())
 
 
@@ -65,10 +66,10 @@ class Policy(sql.Base, rules.Policy):
 
         return self._get_policy(session, policy_id).to_dict()
 
-    def get_tenant_policy(self, tenant_id):
+    def get_role_policy(self, role_id):
         session = self.get_session()
         try:
-            return [policy.to_dict() for policy in session.query(PolicyModel).filter_by(tenant_id=tenant_id)]
+            return session.query(PolicyModel).filter_by(role_id=role_id).one().to_dict()
         except sql.NotFound:
             return None
 

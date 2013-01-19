@@ -95,18 +95,18 @@ class Auth(controller.V2Controller):
                 user_id=user_ref['id'],
                 tenant_id=tenant_ref['id'],
                 metadata=metadata_ref)
-            policies = self.policy_api.get_tenant_policy(
-                context=context,
-                tenant_id=tenant_ref['id'])
         else:
             catalog_ref = {}
 
         auth_token_data['id'] = 'placeholder'
 
         roles_ref = []
+        policy_ref = []
         for role_id in metadata_ref.get('roles', []):
             role_ref = self.identity_api.get_role(context, role_id)
             roles_ref.append(dict(name=role_ref['name']))
+            policy = self.policy_api.get_role_policy(context,role_id)
+            policy_ref.append({role_ref['name']:policy['id']})
 
         token_data = Auth.format_token(auth_token_data, roles_ref)
 
