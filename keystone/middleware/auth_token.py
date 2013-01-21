@@ -310,7 +310,6 @@ class AuthProtocol(object):
             'X-User',
             'X-Tenant',
             'X-Role',
-            'X-Policy',
         )
         LOG.debug('Removing headers from request environment: %s' %
                   ','.join(auth_headers))

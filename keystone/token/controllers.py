@@ -377,13 +377,13 @@ class Auth(controller.V2Controller):
         # fill out the roles in the metadata
         metadata_ref = token_ref['metadata']
         roles_ref = []
-        policy_ref = []
+        policy_ref = {}
         for role_id in metadata_ref.get('roles', []):
             role_ref = self.identity_api.get_role(context, role_id)
             roles_ref.append(role_ref)
             policy = self.policy_api.get_role_policy(context,role_id)
             if policy:
-                policy_ref.append({role_ref['name']:(policy['id'],policy['timestamp'].strftime('%s'))})
+                policy_ref[role_ref['name']]=(policy['id'],policy['timestamp'].strftime('%s'))
 
 
         # Get a service catalog if possible
