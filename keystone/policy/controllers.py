@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import uuid
+import datetime
 
 from keystone.common import controller
 from keystone import exception
@@ -37,7 +38,7 @@ class Policy(controller.V2Controller):
         policy_id = uuid.uuid4().hex
         policy_ref = policy.copy()
         policy_ref['id'] = policy_id
-
+        policy_ref['timestamp']= datetime.datetime.now()
         ref = self.policy_api.create_policy(context, policy_ref['id'], policy_ref)
         return {'policy':ref}
 
@@ -49,7 +50,7 @@ class Policy(controller.V2Controller):
     def get_role_policy(self, context, role_id):
         self.assert_admin(context)
         ref = self.policy_api.get_role_policy(context, role_id)
-        return {'policies':ref}
+        return {'policy':ref}
 
     def list_policies(self, context):
          if 'name' in context['query_string']:
@@ -67,7 +68,6 @@ class Policy(controller.V2Controller):
     def delete_policy(self, context, policy_id):
         self.assert_admin(context)
         return self.policy_api.delete_policy(context, policy_id)
-
 
 class PolicyV3(controller.V3Controller):
     @controller.protected

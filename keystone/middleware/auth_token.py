@@ -305,10 +305,12 @@ class AuthProtocol(object):
             'X-User-Name',
             'X-Roles',
             'X-Service-Catalog',
+            'X-Policy',
             # Deprecated
             'X-User',
             'X-Tenant',
             'X-Role',
+            'X-Policy',
         )
         LOG.debug('Removing headers from request environment: %s' %
                   ','.join(auth_headers))
@@ -512,7 +514,7 @@ class AuthProtocol(object):
         user = token_info['access']['user']
         token = token_info['access']['token']
         roles = ','.join([role['name'] for role in user.get('roles', [])])
-
+        policy = user.get('policy', [])
         def get_tenant_info():
             """Returns a (tenant_id, tenant_name) tuple from context."""
             def essex():
@@ -547,6 +549,7 @@ class AuthProtocol(object):
             'X-User-Id': user_id,
             'X-User-Name': user_name,
             'X-Roles': roles,
+            'X-Policy':policy,
             # Deprecated
             'X-User': user_name,
             'X-Tenant': tenant_name,

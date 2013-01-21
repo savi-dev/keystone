@@ -4,6 +4,9 @@ from keystone.common import sql
 from keystone.common.sql import migration
 from keystone import exception
 from keystone.policy.backends import rules
+from keystone.common import logging
+
+LOG = logging.getLogger(__name__)
 
 
 def handle_conflicts(type='object'):
@@ -21,14 +24,14 @@ def handle_conflicts(type='object'):
 
 class PolicyModel(sql.ModelBase, sql.DictBase):
     __tablename__ = 'policy'
-    attributes = ['id', 'blob', 'type','role_id']
+    attributes = ['id', 'blob', 'type','role_id','timestamp']
     id = sql.Column(sql.String(64), primary_key=True)
     blob = sql.Column(sql.JsonBlob(), nullable=False)
     type = sql.Column(sql.String(255), nullable=False)
     role_id = sql.Column(sql.String(64),
                             sql.ForeignKey('role.id'),
-                            nullable=False),
-    timestamp = sql.Column('expires', sql.DateTime()),
+                            nullable=False)
+    timestamp = sql.Column(sql.DateTime())
     extra = sql.Column(sql.JsonBlob())
 
 
@@ -68,10 +71,11 @@ class Policy(sql.Base, rules.Policy):
 
     def get_role_policy(self, role_id):
         session = self.get_session()
+
         try:
-            return session.query(PolicyModel).filter_by(role_id=role_id).one().to_dict()
+            return session.query(PolicyModel).filter_by(role_id=role_id).first()
         except sql.NotFound:
-            return None
+            None
 
     @handle_conflicts(type='policy')
     def update_policy(self, policy_id, policy):
