@@ -109,7 +109,7 @@ class Auth(controller.V2Controller):
             if policy:
                 policy_ref.append({role_ref['name']:(policy['id'],policy['timestamp'].strftime('%s'))})
 
-        token_data = Auth.format_token(auth_token_data, roles_ref)
+        token_data = Auth.format_token(auth_token_data, roles_ref, policy_ref)
 
         service_catalog = Auth.format_catalog(catalog_ref)
 #        LOG.debug("This is policy %s" % policies)
