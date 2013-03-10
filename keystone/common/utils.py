@@ -27,6 +27,13 @@ import subprocess
 import time
 import urllib
 
+
+import smtplib
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEBase import MIMEBase
+from email.MIMEText import MIMEText
+from email import Encoders
+
 import passlib.hash
 
 from keystone.common import logging
@@ -311,3 +318,21 @@ def setup_remote_pydev_debug():
         except:
             LOG.exception(_(error_msg))
             raise
+def mail(to, subject, text):
+   txt = text + CONF.email.portal
+   msg = MIMEMultipart()
+   
+   msg['From'] = CONF.email.user
+   msg['To'] = to
+   msg['Subject'] = subject
+
+   msg.attach(MIMEText(txt))
+   mailServer = smtplib.SMTP(CONF.email.host, CONF.email.port)
+   mailServer.ehlo()
+   mailServer.starttls()
+   mailServer.ehlo()
+   mailServer.login(CONF.email.user, CONF.email.password)
+   mailServer.sendmail(CONF.email.user, to, msg.as_string())
+   mailServer.close()
+   
+    

@@ -18,14 +18,14 @@ import gettext
 import os
 import sys
 
-from keystone.common import logging
 from keystone.openstack.common import cfg
-
+from keystone.common import logging
 
 gettext.install('keystone', unicode=1)
 
 
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
 
 
 def setup_logging(conf):
@@ -122,6 +122,11 @@ def register_cli_int(*args, **kw):
     group = kw.pop('group', None)
     return conf.register_cli_opt(cfg.IntOpt(*args, **kw), group=group)
 
+def register_tuple(*args, **kw):
+    conf = kw.pop('conf', CONF)
+    group = kw.pop('group', None)
+    LOG.debug("RRRRRRRRRRRRRRRR %s" % cfg.ListTupleOpt(*args, **kw))
+    return conf.register_opt(cfg.ListTupleOpt(*args, **kw), group=group)
 
 register_cli_bool('standard-threads', default=False)
 
@@ -157,6 +162,13 @@ register_int('key_size', group='signing', default=1024)
 register_int('valid_days', group='signing', default=3650)
 register_str('ca_password', group='signing', default=None)
 
+#Email
+register_str('user',group='email',default='noreply@savinetwork.ca')
+register_str('password',group='email',default=None)
+register_str('host',group='email', default='smtp.gmail.com')
+register_int('port', group='email', default=587)
+register_str('admin_email', group='email', default=None)
+register_str('portal', group='email', default=None)
 
 # sql options
 register_str('connection', group='sql', default='sqlite:///keystone.db')

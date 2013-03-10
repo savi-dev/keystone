@@ -99,6 +99,16 @@
 #ca_certs = /etc/keystone/ssl/certs/ca.pem
 #cert_required = True
 
+[email]
+user=noreply@savinetwork.ca
+password=sample
+host=smtp.gmail.com
+port=587
+admin_email = admin@savinetwork.ca
+portal=http://portal.savinetwork.ca
+
+
+
 [signing]
 #token_format = PKI
 #certfile = /etc/keystone/ssl/certs/signing_cert.pem

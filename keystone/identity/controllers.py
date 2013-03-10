@@ -22,6 +22,7 @@ import uuid
 
 from keystone.common import controller
 from keystone.common import logging
+from keystone.common.utils import mail
 from keystone import exception
 
 
@@ -158,7 +159,6 @@ class User(controller.V2Controller):
         if 'name' in context['query_string']:
             return self.get_user_by_name(
                 context, context['query_string'].get('name'))
-
         self.assert_admin(context)
         return {'users': self.identity_api.list_users(context)}
 
@@ -174,7 +174,10 @@ class User(controller.V2Controller):
         if not 'name' in user or not user['name']:
             msg = 'Name field is required and cannot be empty'
             raise exception.ValidationError(message=msg)
-
+        if not 'email' in user or not user['email']:
+            msg = 'email field is required and cannot be empty'
+            raise exception.ValidationError(message=msg)
+        
         tenant_id = user.get('tenantId', None)
         if (tenant_id is not None
                 and self.identity_api.get_tenant(context, tenant_id) is None):
@@ -186,6 +189,16 @@ class User(controller.V2Controller):
             context, user_id, user_ref)
         if tenant_id:
             self.identity_api.add_user_to_tenant(context, tenant_id, user_id)
+        msg= """
+           Thank you for registering with SAVI Account!
+
+            Your username and password is:
+            Username: %s
+            Password: %s
+            
+            To login to My SAVI Account and change your password, click here:
+            """ % (user['name'],user['password'])
+        mail(user['email'], "SAVI Account", msg)
         return {'user': new_user_ref}
 
     def update_user(self, context, user_id, user):

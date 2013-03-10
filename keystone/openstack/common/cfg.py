@@ -807,6 +807,34 @@ class MultiStrOpt(Opt):
         return cparser.get(section, [self.dest], multi=True)
 
 
+class ListTupleOpt(Opt):
+
+    """
+    List opt values are tuples separated by commas. The opt value
+    is a list containing these tuples.
+    """
+
+    class _StoreListAction(argparse.Action):
+        """
+        An argparse action for parsing an option value into a list.
+        """
+        def __call__(self, parser, namespace, values, option_string=None):
+            if values is not None:
+                values = [a.strip() for a in values.split(',')]
+            setattr(namespace, self.dest, values)
+
+    def _get_from_config_parser(self, cparser, section):
+        """Retrieve the opt value as a list from ConfigParser."""
+        return [v.split(',') for v in
+                self._cparser_get_with_deprecated(cparser, section)]
+
+    def _get_argparse_kwargs(self, group, **kwargs):
+        """Extends the base argparse keyword dict for list options."""
+        return Opt._get_argparse_kwargs(self,
+                                        group,
+                                        action=ListOpt._StoreListAction,
+                                        **kwargs)
+
 class SubCommandOpt(Opt):
 
     """
