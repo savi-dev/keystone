@@ -190,6 +190,13 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
+    def get_realms(self):
+        """ Get endpoints for a service
+        return endpoints-ref 
+        """
+        raise exception.NotImplemented()
+    
+
     def get_catalog(self, user_id, tenant_id, metadata=None):
         """Retreive and format the current service catalog.
 

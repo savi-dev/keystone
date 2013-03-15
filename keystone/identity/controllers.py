@@ -20,11 +20,13 @@ import urllib
 import urlparse
 import uuid
 
+from keystone import config
 from keystone.common import controller
 from keystone.common import logging
 from keystone.common.utils import mail
 from keystone import exception
 
+CONF=config.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -189,16 +191,17 @@ class User(controller.V2Controller):
             context, user_id, user_ref)
         if tenant_id:
             self.identity_api.add_user_to_tenant(context, tenant_id, user_id)
-        msg= """
-           Thank you for registering with SAVI Account!
+        if CONF.email.enable:
+            msg= """
+               Thank you for registering with SAVI Account!
 
-            Your username and password is:
-            Username: %s
-            Password: %s
+                Your username and password is:
+                Username: %s
+                Password: %s
             
-            To login to My SAVI Account and change your password, click here:
-            """ % (user['name'],user['password'])
-        mail(user['email'], "SAVI Account", msg)
+                To login to My SAVI Account and change your password, click here:
+                """ % (user['name'],user['password'])
+            mail(user['email'], "SAVI Account", msg)
         return {'user': new_user_ref}
 
     def update_user(self, context, user_id, user):

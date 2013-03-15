@@ -156,6 +156,39 @@ class Catalog(sql.Base, catalog.Driver):
             session.flush()
         return ref.to_dict()
 
+    def _list_realms(self):
+        session = self.get_session()
+        service = session.query(Service).filter_by(type='identity').one()
+        endpoints = session.query(Endpoint).filter_by(service_id=service['id']).all()
+        return [e.to_dict() for e in list(endpoints)]
+    
+    def get_realms(self):
+        d = dict(CONF.iteritems())
+        realms = {}
+        services = {}
+        for endpoint in self._list_realms():
+            # look up the service
+            services.setdefault(
+                endpoint['service_id'],
+                self.get_service(endpoint['service_id']))
+            service = services[endpoint['service_id']]
+
+            # add the endpoint to the catalog if it's not already there
+            realms.setdefault(endpoint['region'], {})
+            realms[endpoint['region']].setdefault(
+                service['type'], {
+                    'id': endpoint['id'],
+                    'name': service['name'],
+                    'publicURL': '',  # this may be overridden, but must exist
+                })
+
+            # add the interface's url
+            url = core.format_url(endpoint.get('url'), d)
+            interface_url = '%sURL' % endpoint['interface']
+            realms[endpoint['region']][service['type']][interface_url] = url
+
+        return realms
+
     def get_catalog(self, user_id, tenant_id, metadata=None):
         d = dict(CONF.iteritems())
         d.update({'tenant_id': tenant_id,

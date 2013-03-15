@@ -163,6 +163,7 @@ register_int('valid_days', group='signing', default=3650)
 register_str('ca_password', group='signing', default=None)
 
 #Email
+register_bool('enable',group='email',default=False)
 register_str('user',group='email',default='noreply@savinetwork.ca')
 register_str('password',group='email',default=None)
 register_str('host',group='email', default='smtp.gmail.com')

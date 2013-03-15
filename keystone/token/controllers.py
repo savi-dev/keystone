@@ -96,7 +96,7 @@ class Auth(controller.V2Controller):
                 tenant_id=tenant_ref['id'],
                 metadata=metadata_ref)
         else:
-            catalog_ref = {}
+            catalog_ref = self.catalog_api.get_realms(context)
 
         auth_token_data['id'] = 'placeholder'
 
