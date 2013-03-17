@@ -102,22 +102,18 @@ class Auth(controller.V2Controller):
 
         roles_ref = []
         policy_ref = []
+        for policy in self.policy_api.list_policies(context):
+            service = self.catalog_api.get_service(context, policy['service_id'])
+            policy_ref.append({'service':service['type'],'timestamp':policy['timestamp']})
         for role_id in metadata_ref.get('roles', []):
             role_ref = self.identity_api.get_role(context, role_id)
             roles_ref.append(dict(name=role_ref['name']))
-            policy = self.policy_api.get_role_policy(context,role_id)
-            if policy:
-                policy_ref.append({role_ref['name']:(policy['id'],policy['timestamp'].strftime('%s'))})
 
-        token_data = Auth.format_token(auth_token_data, roles_ref, policy_ref)
+        token_data = Auth.format_token(auth_token_data, roles_ref)
 
         service_catalog = Auth.format_catalog(catalog_ref)
-#        LOG.debug("This is policy %s" % policies)
-#        policy_ref = {'policy':policies}
-        #LOG.debug("This is policy %s" % policy_ref)
         token_data['access']['serviceCatalog'] = service_catalog
-        #if policy_ref:
-        #    token_data['access']['policy']=policy_ref
+        token_data['access']['policy']= policy_ref
         if config.CONF.signing.token_format == 'UUID':
             token_id = uuid.uuid4().hex
         elif config.CONF.signing.token_format == 'PKI':
@@ -377,14 +373,14 @@ class Auth(controller.V2Controller):
         # fill out the roles in the metadata
         metadata_ref = token_ref['metadata']
         roles_ref = []
-        policy_ref = {}
+        policy_ref = []
+        for policy in self.policy_api.list_policies(context):
+            service = self.catalog_api.get_service(context, policy['service_id'])
+            policy_ref.append({'service':service['type'],'timestamp':policy['timestamp']})
         for role_id in metadata_ref.get('roles', []):
             role_ref = self.identity_api.get_role(context, role_id)
             roles_ref.append(role_ref)
-            policy = self.policy_api.get_role_policy(context,role_id)
-            if policy:
-                policy_ref[role_ref['name']]=(policy['id'],policy['timestamp'].strftime('%s'))
-
+            
 
         # Get a service catalog if possible
         # This is needed for on-behalf-of requests
@@ -395,7 +391,7 @@ class Auth(controller.V2Controller):
                 user_id=token_ref['user']['id'],
                 tenant_id=token_ref['tenant']['id'],
                 metadata=metadata_ref)
-        return Auth.format_token(token_ref, roles_ref, policy_ref, catalog_ref)
+        return Auth.format_token(token_ref, roles_ref, catalog_ref)
 
     def delete_token(self, context, token_id):
         """Delete a token, effectively invalidating it for authz."""
@@ -442,7 +438,7 @@ class Auth(controller.V2Controller):
         return o
 
     @classmethod
-    def format_token(cls, token_ref, roles_ref, policy_ref=None, catalog_ref=None):
+    def format_token(cls, token_ref, roles_ref, policy_ref = None, catalog_ref=None):
         user_ref = token_ref['user']
         metadata_ref = token_ref['metadata']
         expires = token_ref['expires']
@@ -459,7 +455,6 @@ class Auth(controller.V2Controller):
                                  'roles': roles_ref,
                                  'roles_links': metadata_ref.get('roles_links',
                                                                  []),
-                                 'policy':policy_ref
                                  }
                         }
              }
@@ -468,6 +463,8 @@ class Auth(controller.V2Controller):
             o['access']['token']['tenant'] = token_ref['tenant']
         if catalog_ref is not None:
             o['access']['serviceCatalog'] = Auth.format_catalog(catalog_ref)
+        if policy_ref is None:
+            o['access']['policy'] = policy_ref
         if metadata_ref:
             if 'is_admin' in metadata_ref:
                 o['access']['metadata'] = {'is_admin':

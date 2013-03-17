@@ -32,8 +32,8 @@ class Policy(controller.V2Controller):
         if not 'type' in policy or not policy['type']:
             msg = 'type field is required and cannot be empty'
             raise exception.ValidationError(message=msg)
-        if not 'role_id' in policy or not policy['role_id']:
-            msg = 'role-id field is required and cannot be empty'
+        if not 'service_id' in policy or not policy['service_id']:
+            msg = 'service-id field is required and cannot be empty'
             raise exception.ValidationError(message=msg)
         policy_id = uuid.uuid4().hex
         policy_ref = policy.copy()

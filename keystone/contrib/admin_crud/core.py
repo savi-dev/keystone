@@ -56,10 +56,6 @@ class CrudExtension(wsgi.ExtensionRouter):
                        controller=policy_controller,
                        action='delete_policy',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/policies/role/{role_id}',
-                       controller=policy_controller,
-                       action='get_role_policy',
-                       conditions=dict(method=['GET']))
 
 
         # Tenant Operations

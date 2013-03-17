@@ -14,22 +14,21 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import migrate
 import sqlalchemy as sql
 
 
 def upgrade(migrate_engine):
     meta = sql.MetaData()
     meta.bind = migrate_engine
-    role_table = sql.Table('role', meta, autoload=True)
+    service_table = sql.Table('service', meta, autoload=True)
     policy_table = sql.Table(
         'policy',
         meta,
         sql.Column('id', sql.String(64), primary_key=True),
         sql.Column('type', sql.String(255), nullable=False),
-         sql.Column('role_id',
+         sql.Column('service_id',
                    sql.String(64),
-                   sql.ForeignKey('role.id'),
+                   sql.ForeignKey('service.id'),
                    nullable=False),
         sql.Column('timestamp', sql.DateTime()),
         sql.Column('blob', sql.Text(), nullable=False),

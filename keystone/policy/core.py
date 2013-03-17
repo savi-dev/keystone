@@ -15,7 +15,6 @@
 # under the License.
 
 """Main entry point into the Policy service."""
-import uuid
 
 from keystone.common import dependency
 from keystone.common import manager
@@ -45,8 +44,8 @@ class Manager(manager.Manager):
             raise exception.PolicyNotFound(policy_id=policy_id)
 
 
-    def get_role_policy(self, context, role_id):
-        return self.driver.get_role_policy(role_id)
+    def get_service_policy(self, context, service_id):
+        return self.driver.get_role_policy(service_id)
 
     def update_policy(self, context, policy_id, policy):
         if 'id' in policy and policy_id != policy['id']:
@@ -92,7 +91,7 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
-    def get_role_policy(self, role_id):
+    def get_service_policy(self, service_id):
         """Retrieve a policy blob for a specific tenant.
 
         :raises: keystone.exception.PolicyNotFound
