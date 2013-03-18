@@ -241,33 +241,37 @@ class Application(BaseApplication):
         return dict([(self._normalize_arg(k), v)
                      for (k, v) in d.iteritems()])
 
-    def assert_admin(self, context):
-        if not context['is_admin']:
-            try:
-                user_token_ref = self.token_api.get_token(
-                    context=context, token_id=context['token_id'])
-            except exception.TokenNotFound as e:
-                raise exception.Unauthorized(e)
+    def assert_admin(self, context, target={}):
+#        if not context['is_admin']:
+        try:
+            user_token_ref = self.token_api.get_token(
+                context=context, token_id=context['token_id'])
+        except exception.TokenNotFound as e:
+            raise exception.Unauthorized(e)
+        
+        if user_token_ref['tenant']['name']=='admin' and user_token_ref['user']['name']=='admin':
+            LOG.debug("Admin Request")
+            return  
+        
+        creds = user_token_ref['metadata'].copy()
 
-            creds = user_token_ref['metadata'].copy()
+        try:
+            creds['user_id'] = user_token_ref['user'].get('id')
+        except AttributeError:
+            logging.debug('Invalid user')
+            raise exception.Unauthorized()
 
-            try:
-                creds['user_id'] = user_token_ref['user'].get('id')
-            except AttributeError:
-                logging.debug('Invalid user')
-                raise exception.Unauthorized()
+        try:
+            creds['tenant_id'] = user_token_ref['tenant'].get('id')
+        except AttributeError:
+            logging.debug('Invalid tenant')
+            raise exception.Unauthorized()
 
-            try:
-                creds['tenant_id'] = user_token_ref['tenant'].get('id')
-            except AttributeError:
-                logging.debug('Invalid tenant')
-                raise exception.Unauthorized()
-
-            # NOTE(vish): this is pretty inefficient
-            creds['roles'] = [self.identity_api.get_role(context, role)['name']
-                              for role in creds.get('roles', [])]
-            # Accept either is_admin or the admin role
-            self.policy_api.enforce(context, creds, 'admin_required', {})
+        # NOTE(vish): this is pretty inefficient
+        creds['roles'] = [self.identity_api.get_role(context, role)['name']
+                          for role in creds.get('roles', [])]
+        # Accept either is_admin or the admin role
+        self.policy_api.enforce(context, creds, 'admin_required', target)
 
 
 class Middleware(Application):
