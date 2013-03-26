@@ -19,7 +19,6 @@ import uuid
 import memcache
 
 from keystone.common import utils
-from keystone import exception
 from keystone.openstack.common import timeutils
 from keystone import test
 from keystone.token.backends import memcache as token_memcache
@@ -37,7 +36,7 @@ class MemcacheClient(object):
     def add(self, key, value):
         if self.get(key):
             return False
-        self.set(key, value)
+        return self.set(key, value)
 
     def append(self, key, value):
         existing_value = self.get(key)
@@ -79,8 +78,21 @@ class MemcacheToken(test.TestCase, test_backend.TokenTests):
         fake_client = MemcacheClient()
         self.token_api = token_memcache.Token(client=fake_client)
 
-    def test_get_unicode(self):
+    def test_create_unicode_token_id(self):
         token_id = unicode(uuid.uuid4().hex)
-        data = {'id': token_id, 'a': 'b'}
+        data = {'id': token_id, 'a': 'b',
+                'user': {'id': 'testuserid'}}
         self.token_api.create_token(token_id, data)
         self.token_api.get_token(token_id)
+
+    def test_create_unicode_user_id(self):
+        token_id = uuid.uuid4().hex
+        user_id = unicode(uuid.uuid4().hex)
+        data = {'id': token_id, 'a': 'b',
+                'user': {'id': user_id}}
+        self.token_api.create_token(token_id, data)
+        self.token_api.get_token(token_id)
+
+    def test_list_tokens_unicode_user_id(self):
+        user_id = unicode(uuid.uuid4().hex)
+        self.token_api.list_tokens(user_id)

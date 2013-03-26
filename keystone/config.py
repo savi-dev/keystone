@@ -18,14 +18,14 @@ import gettext
 import os
 import sys
 
-from keystone.common import logging
 from keystone.openstack.common import cfg
-
+from keystone.common import logging
 
 gettext.install('keystone', unicode=1)
 
 
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
 
 
 def setup_logging(conf):
@@ -41,8 +41,8 @@ def setup_logging(conf):
             logging.config.fileConfig(conf.log_config)
             return
         else:
-            raise RuntimeError('Unable to locate specified logging '
-                               'config file: %s' % conf.log_config)
+            raise RuntimeError(_('Unable to locate specified logging '
+                               'config file: %s') % conf.log_config)
 
     root_logger = logging.root
     if conf.debug:
@@ -87,6 +87,18 @@ def register_cli_str(*args, **kw):
     return conf.register_cli_opt(cfg.StrOpt(*args, **kw), group=group)
 
 
+def register_list(*args, **kw):
+    conf = kw.pop('conf', CONF)
+    group = kw.pop('group', None)
+    return conf.register_opt(cfg.ListOpt(*args, **kw), group=group)
+
+
+def register_cli_list(*args, **kw):
+    conf = kw.pop('conf', CONF)
+    group = kw.pop('group', None)
+    return conf.register_cli_opt(cfg.ListOpt(*args, **kw), group=group)
+
+
 def register_bool(*args, **kw):
     conf = kw.pop('conf', CONF)
     group = kw.pop('group', None)
@@ -110,6 +122,17 @@ def register_cli_int(*args, **kw):
     group = kw.pop('group', None)
     return conf.register_cli_opt(cfg.IntOpt(*args, **kw), group=group)
 
+def register_tuple(*args, **kw):
+    conf = kw.pop('conf', CONF)
+    group = kw.pop('group', None)
+    LOG.debug("RRRRRRRRRRRRRRRR %s" % cfg.ListTupleOpt(*args, **kw))
+    return conf.register_opt(cfg.ListTupleOpt(*args, **kw), group=group)
+
+register_cli_bool('standard-threads', default=False)
+
+register_cli_str('pydev-debug-host', default=None)
+register_cli_int('pydev-debug-port', default=None)
+
 register_str('admin_token', default='ADMIN')
 register_str('bind_host', default='0.0.0.0')
 register_str('compute_port', default=8774)
@@ -117,6 +140,8 @@ register_str('admin_port', default=35357)
 register_str('public_port', default=5000)
 register_str('onready')
 register_str('auth_admin_prefix', default='')
+register_str('policy_file', default='policy.json')
+register_str('policy_default_rule', default=None)
 
 #ssl options
 register_bool('enable', group='ssl', default=False)
@@ -137,6 +162,14 @@ register_int('key_size', group='signing', default=1024)
 register_int('valid_days', group='signing', default=3650)
 register_str('ca_password', group='signing', default=None)
 
+#Email
+register_bool('enable',group='email',default=False)
+register_str('user',group='email',default='noreply@savinetwork.ca')
+register_str('password',group='email',default=None)
+register_str('host',group='email', default='smtp.gmail.com')
+register_int('port', group='email', default=587)
+register_str('admin_email', group='email', default=None)
+register_str('portal', group='email', default=None)
 
 # sql options
 register_str('connection', group='sql', default='sqlite:///keystone.db')
@@ -156,29 +189,55 @@ register_str('driver', group='ec2',
 register_str('driver', group='stats',
              default='keystone.contrib.stats.backends.kvs.Stats')
 
+
 #ldap
 register_str('url', group='ldap', default='ldap://localhost')
 register_str('user', group='ldap', default='dc=Manager,dc=example,dc=com')
 register_str('password', group='ldap', default='freeipa4all')
 register_str('suffix', group='ldap', default='cn=example,cn=com')
 register_bool('use_dumb_member', group='ldap', default=False)
-register_str('user_name_attribute', group='ldap', default='sn')
-
+register_str('dumb_member', group='ldap', default='cn=dumb,dc=nonexistent')
+register_bool('allow_subtree_delete', group='ldap', default=False)
 
 register_str('user_tree_dn', group='ldap', default=None)
+register_str('user_filter', group='ldap', default=None)
 register_str('user_objectclass', group='ldap', default='inetOrgPerson')
 register_str('user_id_attribute', group='ldap', default='cn')
+register_str('user_name_attribute', group='ldap', default='sn')
+register_str('user_mail_attribute', group='ldap', default='email')
+register_str('user_pass_attribute', group='ldap', default='userPassword')
+register_str('user_enabled_attribute', group='ldap', default='enabled')
+register_int('user_enabled_mask', group='ldap', default=0)
+register_str('user_enabled_default', group='ldap', default='True')
+register_list('user_attribute_ignore', group='ldap',
+              default='tenant_id,tenants')
+register_bool('user_allow_create', group='ldap', default=True)
+register_bool('user_allow_update', group='ldap', default=True)
+register_bool('user_allow_delete', group='ldap', default=True)
 
 register_str('tenant_tree_dn', group='ldap', default=None)
+register_str('tenant_filter', group='ldap', default=None)
 register_str('tenant_objectclass', group='ldap', default='groupOfNames')
 register_str('tenant_id_attribute', group='ldap', default='cn')
 register_str('tenant_member_attribute', group='ldap', default='member')
 register_str('tenant_name_attribute', group='ldap', default='ou')
+register_str('tenant_desc_attribute', group='ldap', default='desc')
+register_str('tenant_enabled_attribute', group='ldap', default='enabled')
+register_list('tenant_attribute_ignore', group='ldap', default='')
+register_bool('tenant_allow_create', group='ldap', default=True)
+register_bool('tenant_allow_update', group='ldap', default=True)
+register_bool('tenant_allow_delete', group='ldap', default=True)
 
 register_str('role_tree_dn', group='ldap', default=None)
+register_str('role_filter', group='ldap', default=None)
 register_str('role_objectclass', group='ldap', default='organizationalRole')
 register_str('role_id_attribute', group='ldap', default='cn')
+register_str('role_name_attribute', group='ldap', default='ou')
 register_str('role_member_attribute', group='ldap', default='roleOccupant')
+register_list('role_attribute_ignore', group='ldap', default='')
+register_bool('role_allow_create', group='ldap', default=True)
+register_bool('role_allow_update', group='ldap', default=True)
+register_bool('role_allow_delete', group='ldap', default=True)
 
 #pam
 register_str('url', group='pam', default=None)

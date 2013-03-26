@@ -21,21 +21,6 @@ from keystone import exception
 from keystone import identity
 
 
-def _filter_user(user_ref):
-    if user_ref:
-        user_ref = user_ref.copy()
-        user_ref.pop('password', None)
-        user_ref.pop('tenants', None)
-    return user_ref
-
-
-def _ensure_hashed_password(user_ref):
-    pw = user_ref.get('password', None)
-    if pw is not None:
-        user_ref['password'] = utils.hash_password(pw)
-    return user_ref
-
-
 class Identity(kvs.Base, identity.Driver):
     # Public interface
     def authenticate(self, user_id=None, tenant_id=None, password=None):
@@ -70,7 +55,7 @@ class Identity(kvs.Base, identity.Driver):
             except exception.MetadataNotFound:
                 metadata_ref = {}
 
-        return (_filter_user(user_ref), tenant_ref, metadata_ref)
+        return (identity.filter_user(user_ref), tenant_ref, metadata_ref)
 
     def get_tenant(self, tenant_id):
         try:
@@ -107,10 +92,10 @@ class Identity(kvs.Base, identity.Driver):
             raise exception.UserNotFound(user_id=user_name)
 
     def get_user(self, user_id):
-        return _filter_user(self._get_user(user_id))
+        return identity.filter_user(self._get_user(user_id))
 
     def get_user_by_name(self, user_name):
-        return _filter_user(self._get_user_by_name(user_name))
+        return identity.filter_user(self._get_user_by_name(user_name))
 
     def get_metadata(self, user_id, tenant_id):
         try:
@@ -213,13 +198,13 @@ class Identity(kvs.Base, identity.Driver):
             msg = 'Duplicate name, %s.' % user['name']
             raise exception.Conflict(type='user', details=msg)
 
-        user = _ensure_hashed_password(user)
+        user = utils.hash_user_password(user)
         self.db.set('user-%s' % user_id, user)
         self.db.set('user_name-%s' % user['name'], user)
         user_list = set(self.db.get('user_list', []))
         user_list.add(user_id)
         self.db.set('user_list', list(user_list))
-        return user
+        return identity.filter_user(user)
 
     def update_user(self, user_id, user):
         if 'name' in user:
@@ -234,7 +219,7 @@ class Identity(kvs.Base, identity.Driver):
         except exception.NotFound:
             raise exception.UserNotFound(user_id=user_id)
         new_user = old_user.copy()
-        user = _ensure_hashed_password(user)
+        user = utils.hash_user_password(user)
         new_user.update(user)
         if new_user['id'] != user_id:
             raise exception.ValidationError('Cannot change user ID')
@@ -356,8 +341,44 @@ class Identity(kvs.Base, identity.Driver):
     def delete_role(self, role_id):
         try:
             self.db.delete('role-%s' % role_id)
+            metadata_keys = filter(lambda x: x.startswith("metadata-"),
+                                   self.db.keys())
+            for key in metadata_keys:
+                tenant_id = key.split('-')[1]
+                user_id = key.split('-')[2]
+                try:
+                    self.remove_role_from_user_and_tenant(user_id,
+                                                          tenant_id,
+                                                          role_id)
+                except exception.RoleNotFound:
+                    pass
         except exception.NotFound:
             raise exception.RoleNotFound(role_id=role_id)
         role_list = set(self.db.get('role_list', []))
         role_list.remove(role_id)
         self.db.set('role_list', list(role_list))
+
+    # domain crud
+
+    def create_domain(self, domain_id, domain):
+        self.db.set('domain-%s' % domain_id, domain)
+        domain_list = set(self.db.get('domain_list', []))
+        domain_list.add(domain_id)
+        self.db.set('domain_list', list(domain_list))
+        return domain
+
+    def list_domains(self):
+        return self.db.get('domain_list', [])
+
+    def get_domain(self, domain_id):
+        return self.db.get('domain-%s' % domain_id)
+
+    def update_domain(self, domain_id, domain):
+        self.db.set('domain-%s' % domain_id, domain)
+        return domain
+
+    def delete_domain(self, domain_id):
+        self.db.delete('domain-%s' % domain_id)
+        domain_list = set(self.db.get('domain_list', []))
+        domain_list.remove(domain_id)
+        self.db.set('domain_list', list(domain_list))

@@ -258,10 +258,6 @@ class RestfulTestCase(test.TestCase):
 class CoreApiTests(object):
     def assertValidError(self, error):
         """Applicable to XML and JSON."""
-        try:
-            print error.attrib
-        except:
-            pass
         self.assertIsNotNone(error.get('code'))
         self.assertIsNotNone(error.get('title'))
         self.assertIsNotNone(error.get('message'))
@@ -311,6 +307,18 @@ class CoreApiTests(object):
         """Applicable to XML and JSON."""
         self.assertIsNotNone(tenant.get('id'))
         self.assertIsNotNone(tenant.get('name'))
+
+    def test_public_not_found(self):
+        r = self.public_request(
+            path='/%s' % uuid.uuid4().hex,
+            expected_status=404)
+        self.assertValidErrorResponse(r)
+
+    def test_admin_not_found(self):
+        r = self.admin_request(
+            path='/%s' % uuid.uuid4().hex,
+            expected_status=404)
+        self.assertValidErrorResponse(r)
 
     def test_public_multiple_choice(self):
         r = self.public_request(path='/', expected_status=300)
@@ -367,6 +375,22 @@ class CoreApiTests(object):
             expected_status=200)
         self.assertValidAuthenticationResponse(r)
 
+    def test_authenticate_unscoped(self):
+        r = self.public_request(
+            method='POST',
+            path='/v2.0/tokens',
+            body={
+                'auth': {
+                    'passwordCredentials': {
+                        'username': self.user_foo['name'],
+                        'password': self.user_foo['password'],
+                    },
+                },
+            },
+            # TODO(dolph): creating a token should result in a 201 Created
+            expected_status=200)
+        self.assertValidAuthenticationResponse(r)
+
     def test_get_tenants_for_token(self):
         r = self.public_request(path='/v2.0/tenants',
                                 token=self.get_scoped_token())
@@ -413,21 +437,28 @@ class CoreApiTests(object):
             expected_status=204)
 
     def test_endpoints(self):
-        raise nose.exc.SkipTest('Blocked by bug 933555')
-
         token = self.get_scoped_token()
         r = self.admin_request(
             path='/v2.0/tokens/%(token_id)s/endpoints' % {
                 'token_id': token,
             },
             token=token)
-        self.assertValidTokenCatalogResponse(r)
+        self.assertValidEndpointListResponse(r)
 
     def test_get_tenant(self):
         token = self.get_scoped_token()
         r = self.admin_request(
             path='/v2.0/tenants/%(tenant_id)s' % {
                 'tenant_id': self.tenant_bar['id'],
+            },
+            token=token)
+        self.assertValidTenantResponse(r)
+
+    def test_get_tenant_by_name(self):
+        token = self.get_scoped_token()
+        r = self.admin_request(
+            path='/v2.0/tenants?name=%(tenant_name)s' % {
+                'tenant_name': self.tenant_bar['name'],
             },
             token=token)
         self.assertValidTenantResponse(r)
@@ -458,6 +489,15 @@ class CoreApiTests(object):
         r = self.admin_request(
             path='/v2.0/users/%(user_id)s' % {
                 'user_id': self.user_foo['id'],
+            },
+            token=token)
+        self.assertValidUserResponse(r)
+
+    def test_get_user_by_name(self):
+        token = self.get_scoped_token()
+        r = self.admin_request(
+            path='/v2.0/users?name=%(user_name)s' % {
+                'user_name': self.user_foo['name'],
             },
             token=token)
         self.assertValidUserResponse(r)
@@ -522,7 +562,7 @@ class JsonTestCase(RestfulTestCase, CoreApiTests):
         if require_service_catalog:
             self.assertIsNotNone(serviceCatalog)
         if serviceCatalog is not None:
-            self.assertTrue(len(r.body['access']['serviceCatalog']))
+            self.assertTrue(isinstance(serviceCatalog, list))
             for service in r.body['access']['serviceCatalog']:
                 # validate service
                 self.assertIsNotNone(service.get('name'))
@@ -582,6 +622,17 @@ class JsonTestCase(RestfulTestCase, CoreApiTests):
     def assertValidVersionResponse(self, r):
         self.assertValidVersion(r.body.get('version'))
 
+    def assertValidEndpointListResponse(self, r):
+        self.assertIsNotNone(r.body.get('endpoints'))
+        self.assertTrue(len(r.body['endpoints']))
+        for endpoint in r.body['endpoints']:
+            self.assertIsNotNone(endpoint.get('id'))
+            self.assertIsNotNone(endpoint.get('name'))
+            self.assertIsNotNone(endpoint.get('type'))
+            self.assertIsNotNone(endpoint.get('publicURL'))
+            self.assertIsNotNone(endpoint.get('internalURL'))
+            self.assertIsNotNone(endpoint.get('adminURL'))
+
     def test_service_crud_requires_auth(self):
         """Service CRUD should 401 without an X-Auth-Token (bug 1006822)."""
         # values here don't matter because we should 401 before they're checked
@@ -626,7 +677,7 @@ class JsonTestCase(RestfulTestCase, CoreApiTests):
         self.assertValidErrorResponse(r)
 
     def test_fetch_revocation_list_nonadmin_fails(self):
-        r = self.admin_request(
+        self.admin_request(
             method='GET',
             path='/v2.0/tokens/revoked',
             expected_status=401)
@@ -715,13 +766,18 @@ class XmlTestCase(RestfulTestCase, CoreApiTests):
 
         self.assertValidVersion(xml)
 
-    def assertValidTokenCatalogResponse(self, r):
+    def assertValidEndpointListResponse(self, r):
         xml = r.body
         self.assertEqual(xml.tag, self._tag('endpoints'))
 
         self.assertTrue(len(xml.findall(self._tag('endpoint'))))
         for endpoint in xml.findall(self._tag('endpoint')):
-            self.assertIsNotNone(endpoint.get('publicUrl'))
+            self.assertIsNotNone(endpoint.get('id'))
+            self.assertIsNotNone(endpoint.get('name'))
+            self.assertIsNotNone(endpoint.get('type'))
+            self.assertIsNotNone(endpoint.get('publicURL'))
+            self.assertIsNotNone(endpoint.get('internalURL'))
+            self.assertIsNotNone(endpoint.get('adminURL'))
 
     def assertValidTenantResponse(self, r):
         xml = r.body
@@ -769,7 +825,6 @@ class XmlTestCase(RestfulTestCase, CoreApiTests):
         if require_service_catalog:
             self.assertIsNotNone(serviceCatalog)
         if serviceCatalog is not None:
-            self.assertTrue(len(serviceCatalog.findall(self._tag('service'))))
             for service in serviceCatalog.findall(self._tag('service')):
                 # validate service
                 self.assertIsNotNone(service.get('name'))

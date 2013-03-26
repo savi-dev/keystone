@@ -6,8 +6,9 @@ greenlet
 PasteDeploy
 paste
 routes
-sqlalchemy
-sqlalchemy-migrate
+sqlalchemy>=0.7.8,<=0.7.9
+sqlalchemy-migrate>=0.7.2
 passlib
 lxml
 iso8601>=0.1.4
+python-keystoneclient>=0.2,<0.3

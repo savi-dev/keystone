@@ -120,7 +120,7 @@ except ImportError:
             cfg = __import__('%s.openstack.common.cfg' % app,
                              fromlist=['%s.openstack.common' % app])
             # test which application middleware is running in
-            if 'config_file' in cfg.CONF:
+            if hasattr(cfg, 'CONF') and 'config_file' in cfg.CONF:
                 CONF = cfg.CONF
                 break
         except ImportError:
@@ -305,6 +305,7 @@ class AuthProtocol(object):
             'X-User-Name',
             'X-Roles',
             'X-Service-Catalog',
+            'X-Policy',
             # Deprecated
             'X-User',
             'X-Tenant',
@@ -475,7 +476,7 @@ class AuthProtocol(object):
             cached = self._cache_get(user_token)
             if cached:
                 return cached
-            if (len(user_token) > cms.UUID_TOKEN_LENGTH):
+            if cms.is_ans1_token(user_token):
                 verified = self.verify_signed_token(user_token)
                 data = json.loads(verified)
             else:
@@ -512,7 +513,7 @@ class AuthProtocol(object):
         user = token_info['access']['user']
         token = token_info['access']['token']
         roles = ','.join([role['name'] for role in user.get('roles', [])])
-
+        policy = user.get('policy', [])
         def get_tenant_info():
             """Returns a (tenant_id, tenant_name) tuple from context."""
             def essex():
@@ -547,6 +548,7 @@ class AuthProtocol(object):
             'X-User-Id': user_id,
             'X-User-Name': user_name,
             'X-Roles': roles,
+            'X-Policy':policy,
             # Deprecated
             'X-User': user_name,
             'X-Tenant': tenant_name,

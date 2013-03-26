@@ -16,8 +16,11 @@
 
 import datetime
 import uuid
+import default_fixtures
 
+from keystone.catalog import core
 from keystone import exception
+from keystone import test
 from keystone.openstack.common import timeutils
 
 
@@ -68,12 +71,27 @@ class IdentityTests(object):
         self.assertDictEqual(tenant_ref, self.tenant_bar)
         self.assertDictEqual(metadata_ref, self.metadata_foobar)
 
+    def test_authenticate_role_return(self):
+        self.identity_api.add_role_to_user_and_tenant(
+            self.user_foo['id'], self.tenant_bar['id'], 'keystone_admin')
+        user_ref, tenant_ref, metadata_ref = self.identity_api.authenticate(
+            user_id=self.user_foo['id'],
+            tenant_id=self.tenant_bar['id'],
+            password=self.user_foo['password'])
+        self.assertIn('roles', metadata_ref)
+        self.assertIn('keystone_admin', metadata_ref['roles'])
+
     def test_authenticate_no_metadata(self):
-        user = self.user_no_meta
-        tenant = self.tenant_baz
+        user = {
+            'id': 'no_meta',
+            'name': 'NO_META',
+            'password': 'no_meta2',
+        }
+        self.identity_api.create_user(user['id'], user)
+        self.identity_api.add_user_to_tenant(self.tenant_baz['id'], user['id'])
         user_ref, tenant_ref, metadata_ref = self.identity_api.authenticate(
             user_id=user['id'],
-            tenant_id=tenant['id'],
+            tenant_id=self.tenant_baz['id'],
             password=user['password'])
         # NOTE(termie): the password field is left in user_foo to make
         #               it easier to authenticate in tests, but should
@@ -81,7 +99,7 @@ class IdentityTests(object):
         user.pop('password')
         self.assertEquals(metadata_ref, {})
         self.assertDictEqual(user_ref, user)
-        self.assertDictEqual(tenant_ref, tenant)
+        self.assertDictEqual(tenant_ref, self.tenant_baz)
 
     def test_password_hashed(self):
         user_ref = self.identity_api._get_user(self.user_foo['id'])
@@ -314,14 +332,14 @@ class IdentityTests(object):
         roles_ref = self.identity_api.get_roles_for_user_and_tenant(
             self.user_foo['id'], self.tenant_bar['id'])
         self.assertIn('keystone_admin', roles_ref)
-        self.assertNotIn('useless', roles_ref)
+        self.assertNotIn('member', roles_ref)
 
         self.identity_api.add_role_to_user_and_tenant(
-            self.user_foo['id'], self.tenant_bar['id'], 'useless')
+            self.user_foo['id'], self.tenant_bar['id'], 'member')
         roles_ref = self.identity_api.get_roles_for_user_and_tenant(
             self.user_foo['id'], self.tenant_bar['id'])
         self.assertIn('keystone_admin', roles_ref)
-        self.assertIn('useless', roles_ref)
+        self.assertIn('member', roles_ref)
 
     def test_get_roles_for_user_and_tenant_404(self):
         self.assertRaises(exception.UserNotFound,
@@ -355,17 +373,17 @@ class IdentityTests(object):
 
     def test_remove_role_from_user_and_tenant(self):
         self.identity_api.add_role_to_user_and_tenant(
-            self.user_foo['id'], self.tenant_bar['id'], 'useless')
+            self.user_foo['id'], self.tenant_bar['id'], 'member')
         self.identity_api.remove_role_from_user_and_tenant(
-            self.user_foo['id'], self.tenant_bar['id'], 'useless')
+            self.user_foo['id'], self.tenant_bar['id'], 'member')
         roles_ref = self.identity_api.get_roles_for_user_and_tenant(
             self.user_foo['id'], self.tenant_bar['id'])
-        self.assertNotIn('useless', roles_ref)
+        self.assertNotIn('member', roles_ref)
         self.assertRaises(exception.NotFound,
                           self.identity_api.remove_role_from_user_and_tenant,
                           self.user_foo['id'],
                           self.tenant_bar['id'],
-                          'useless')
+                          'member')
 
     def test_role_crud(self):
         role = {'id': uuid.uuid4().hex, 'name': uuid.uuid4().hex}
@@ -598,11 +616,92 @@ class IdentityTests(object):
                           'fake1',
                           user)
 
+    def test_list_users(self):
+        users = self.identity_api.list_users()
+        for test_user in default_fixtures.USERS:
+            self.assertTrue(x for x in users if x['id'] == test_user['id'])
+
+    def test_list_roles(self):
+        roles = self.identity_api.list_roles()
+        for test_role in default_fixtures.ROLES:
+            self.assertTrue(x for x in roles if x['id'] == test_role['id'])
+
+    def test_get_tenants(self):
+        tenants = self.identity_api.get_tenants()
+        for test_tenant in default_fixtures.TENANTS:
+            self.assertTrue(x for x in tenants if x['id'] == test_tenant['id'])
+
+    def test_delete_tenant_with_role_assignments(self):
+        tenant = {'id': 'fake1', 'name': 'fake1'}
+        self.identity_api.create_tenant('fake1', tenant)
+        self.identity_api.add_role_to_user_and_tenant(
+            self.user_foo['id'], tenant['id'], 'member')
+        self.identity_api.delete_tenant(tenant['id'])
+        self.assertRaises(exception.NotFound,
+                          self.identity_api.get_tenant,
+                          tenant['id'])
+
+    def test_delete_role_check_role_grant(self):
+        role = {'id': uuid.uuid4().hex, 'name': uuid.uuid4().hex}
+        self.identity_api.create_role(role['id'], role)
+        self.identity_api.add_role_to_user_and_tenant(
+            self.user_foo['id'], self.tenant_bar['id'], role['id'])
+        self.identity_api.delete_role(role['id'])
+        roles_ref = self.identity_api.get_roles_for_user_and_tenant(
+            self.user_foo['id'], self.tenant_bar['id'])
+        self.assertNotIn(role['id'], roles_ref)
+
+    def test_create_tenant_doesnt_modify_passed_in_dict(self):
+        new_tenant = {'id': 'tenant_id', 'name': 'new_tenant'}
+        original_tenant = new_tenant.copy()
+        self.identity_api.create_tenant('tenant_id', new_tenant)
+        self.assertDictEqual(original_tenant, new_tenant)
+
+    def test_create_user_doesnt_modify_passed_in_dict(self):
+        new_user = {'id': 'user_id', 'name': 'new_user',
+                    'password': 'secret', 'enabled': True}
+        original_user = new_user.copy()
+        self.identity_api.create_user('user_id', new_user)
+        self.assertDictEqual(original_user, new_user)
+
+    def test_update_user_enable(self):
+        user = {'id': 'fake1', 'name': 'fake1', 'enabled': True}
+        self.identity_api.create_user('fake1', user)
+        user_ref = self.identity_api.get_user('fake1')
+        self.assertEqual(user_ref['enabled'], True)
+
+        user['enabled'] = False
+        self.identity_api.update_user('fake1', user)
+        user_ref = self.identity_api.get_user('fake1')
+        self.assertEqual(user_ref['enabled'], user['enabled'])
+
+        user['enabled'] = True
+        self.identity_api.update_user('fake1', user)
+        user_ref = self.identity_api.get_user('fake1')
+        self.assertEqual(user_ref['enabled'], user['enabled'])
+
+    def test_update_tenant_enable(self):
+        tenant = {'id': 'fake1', 'name': 'fake1', 'enabled': True}
+        self.identity_api.create_tenant('fake1', tenant)
+        tenant_ref = self.identity_api.get_tenant('fake1')
+        self.assertEqual(tenant_ref['enabled'], True)
+
+        tenant['enabled'] = False
+        self.identity_api.update_tenant('fake1', tenant)
+        tenant_ref = self.identity_api.get_tenant('fake1')
+        self.assertEqual(tenant_ref['enabled'], tenant['enabled'])
+
+        tenant['enabled'] = True
+        self.identity_api.update_tenant('fake1', tenant)
+        tenant_ref = self.identity_api.get_tenant('fake1')
+        self.assertEqual(tenant_ref['enabled'], tenant['enabled'])
+
 
 class TokenTests(object):
     def test_token_crud(self):
         token_id = uuid.uuid4().hex
-        data = {'id': token_id, 'id_hash': token_id, 'a': 'b'}
+        data = {'id': token_id, 'a': 'b',
+                'user': {'id': 'testuserid'}}
         data_ref = self.token_api.create_token(token_id, data)
         expires = data_ref.pop('expires')
         self.assertTrue(isinstance(expires, datetime.datetime))
@@ -619,10 +718,61 @@ class TokenTests(object):
         self.assertRaises(exception.TokenNotFound,
                           self.token_api.delete_token, token_id)
 
+    def create_token_sample_data(self, tenant_id=None):
+        token_id = uuid.uuid4().hex
+        data = {'id': token_id, 'a': 'b',
+                'user': {'id': 'testuserid'}}
+        if tenant_id is not None:
+            data['tenant'] = {'id': tenant_id, 'name': tenant_id}
+        self.token_api.create_token(token_id, data)
+        return token_id
+
+    def test_token_list(self):
+        tokens = self.token_api.list_tokens('testuserid')
+        self.assertEquals(len(tokens), 0)
+        token_id1 = self.create_token_sample_data()
+        tokens = self.token_api.list_tokens('testuserid')
+        self.assertEquals(len(tokens), 1)
+        self.assertIn(token_id1, tokens)
+        token_id2 = self.create_token_sample_data()
+        tokens = self.token_api.list_tokens('testuserid')
+        self.assertEquals(len(tokens), 2)
+        self.assertIn(token_id2, tokens)
+        self.assertIn(token_id1, tokens)
+        self.token_api.delete_token(token_id1)
+        tokens = self.token_api.list_tokens('testuserid')
+        self.assertIn(token_id2, tokens)
+        self.assertNotIn(token_id1, tokens)
+        self.token_api.delete_token(token_id2)
+        tokens = self.token_api.list_tokens('testuserid')
+        self.assertNotIn(token_id2, tokens)
+        self.assertNotIn(token_id1, tokens)
+
+        # tenant-specific tokens
+        tenant1 = uuid.uuid4().hex
+        tenant2 = uuid.uuid4().hex
+        token_id3 = self.create_token_sample_data(tenant_id=tenant1)
+        token_id4 = self.create_token_sample_data(tenant_id=tenant2)
+        tokens = self.token_api.list_tokens('testuserid')
+        self.assertEquals(len(tokens), 2)
+        self.assertNotIn(token_id1, tokens)
+        self.assertNotIn(token_id2, tokens)
+        self.assertIn(token_id3, tokens)
+        self.assertIn(token_id4, tokens)
+        tokens = self.token_api.list_tokens('testuserid', tenant2)
+        self.assertEquals(len(tokens), 1)
+        self.assertNotIn(token_id1, tokens)
+        self.assertNotIn(token_id2, tokens)
+        self.assertNotIn(token_id3, tokens)
+        self.assertIn(token_id4, tokens)
+
     def test_get_token_404(self):
         self.assertRaises(exception.TokenNotFound,
                           self.token_api.get_token,
                           uuid.uuid4().hex)
+        self.assertRaises(exception.TokenNotFound,
+                          self.token_api.get_token,
+                          None)
 
     def test_delete_token_404(self):
         self.assertRaises(exception.TokenNotFound,
@@ -633,7 +783,8 @@ class TokenTests(object):
         token_id = uuid.uuid4().hex
         expire_time = timeutils.utcnow() - datetime.timedelta(minutes=1)
         data = {'id_hash': token_id, 'id': token_id, 'a': 'b',
-                'expires': expire_time}
+                'expires': expire_time,
+                'user': {'id': 'testuserid'}}
         data_ref = self.token_api.create_token(token_id, data)
         self.assertDictEqual(data_ref, data)
         self.assertRaises(exception.TokenNotFound,
@@ -641,7 +792,8 @@ class TokenTests(object):
 
     def test_null_expires_token(self):
         token_id = uuid.uuid4().hex
-        data = {'id': token_id, 'id_hash': token_id, 'a': 'b', 'expires': None}
+        data = {'id': token_id, 'id_hash': token_id, 'a': 'b', 'expires': None,
+                'user': {'id': 'testuserid'}}
         data_ref = self.token_api.create_token(token_id, data)
         self.assertDictEqual(data_ref, data)
         new_data_ref = self.token_api.get_token(token_id)
@@ -654,9 +806,18 @@ class TokenTests(object):
 
     def delete_token(self):
         token_id = uuid.uuid4().hex
-        data = {'id_hash': token_id, 'id': token_id, 'a': 'b'}
+        data = {'id_hash': token_id, 'id': token_id, 'a': 'b',
+                'user': {'id': 'testuserid'}}
         data_ref = self.token_api.create_token(token_id, data)
         self.token_api.delete_token(token_id)
+        self.assertRaises(
+            exception.TokenNotFound,
+            self.token_api.get_token,
+            data_ref['id'])
+        self.assertRaises(
+            exception.TokenNotFound,
+            self.token_api.delete_token,
+            data_ref['id'])
         return token_id
 
     def test_list_revoked_tokens_returns_empty_list(self):
@@ -671,25 +832,72 @@ class TokenTests(object):
                                         for x in xrange(2)])
 
 
+class CommonHelperTests(test.TestCase):
+    def test_format_helper_raises_malformed_on_missing_key(self):
+        with self.assertRaises(exception.MalformedEndpoint):
+            core.format_url("http://%(foo)s/%(bar)s", {"foo": "1"})
+
+    def test_format_helper_raises_malformed_on_wrong_type(self):
+        with self.assertRaises(exception.MalformedEndpoint):
+            core.format_url("http://%foo%s", {"foo": "1"})
+
+    def test_format_helper_raises_malformed_on_incomplete_format(self):
+        with self.assertRaises(exception.MalformedEndpoint):
+            core.format_url("http://%(foo)", {"foo": "1"})
+
+
 class CatalogTests(object):
     def test_service_crud(self):
+        # create
+        service_id = uuid.uuid4().hex
         new_service = {
-            'id': uuid.uuid4().hex,
+            'id': service_id,
             'type': uuid.uuid4().hex,
             'name': uuid.uuid4().hex,
             'description': uuid.uuid4().hex,
         }
         res = self.catalog_api.create_service(
-            new_service['id'],
+            service_id,
             new_service.copy())
         self.assertDictEqual(res, new_service)
 
-        service_id = new_service['id']
+        # list
+        services = self.catalog_api.list_services()
+        self.assertIn(service_id, [x['id'] for x in services])
+
+        # delete
         self.catalog_api.delete_service(service_id)
         self.assertRaises(exception.ServiceNotFound,
                           self.catalog_man.delete_service, {}, service_id)
         self.assertRaises(exception.ServiceNotFound,
                           self.catalog_man.get_service, {}, service_id)
+
+    def test_delete_service_with_endpoint(self):
+        # create a service
+        service = {
+            'id': uuid.uuid4().hex,
+            'type': uuid.uuid4().hex,
+            'name': uuid.uuid4().hex,
+            'description': uuid.uuid4().hex,
+        }
+        self.catalog_api.create_service(service['id'], service)
+
+        # create an endpoint attached to the service
+        endpoint = {
+            'id': uuid.uuid4().hex,
+            'region': uuid.uuid4().hex,
+            'interface': uuid.uuid4().hex,
+            'url': uuid.uuid4().hex,
+            'service_id': service['id'],
+        }
+        self.catalog_api.create_endpoint(endpoint['id'], endpoint)
+
+        # deleting the service should also delete the endpoint
+        self.catalog_api.delete_service(service['id'])
+        self.assertRaises(exception.EndpointNotFound,
+                          self.catalog_man.get_endpoint, {}, endpoint['id'])
+        self.assertRaises(exception.EndpointNotFound,
+                          self.catalog_man.delete_endpoint, {}, endpoint['id'])
 
     def test_get_service_404(self):
         self.assertRaises(exception.ServiceNotFound,
@@ -709,31 +917,33 @@ class CatalogTests(object):
             'service_id': uuid.uuid4().hex,
         }
         self.assertRaises(exception.ServiceNotFound,
-                          self.catalog_api.create_endpoint,
+                          self.catalog_man.create_endpoint,
+                          {},
                           endpoint['id'],
                           endpoint)
 
     def test_get_endpoint_404(self):
         self.assertRaises(exception.EndpointNotFound,
-                          self.catalog_api.get_endpoint,
+                          self.catalog_man.get_endpoint,
+                          {},
                           uuid.uuid4().hex)
 
     def test_delete_endpoint_404(self):
         self.assertRaises(exception.EndpointNotFound,
-                          self.catalog_api.delete_endpoint,
+                          self.catalog_man.delete_endpoint,
+                          {},
                           uuid.uuid4().hex)
 
-    def test_service_list(self):
-        services = self.catalog_api.list_services()
-        self.assertEqual(3, len(services))
+
 
 class PolicyTests(object):
     def _new_policy_ref(self):
         return {
-                'id':uuid.uuid4().hex,
-                'policy':uuid.uuid4.hex,
-                'endpoint_id':uuid.uuid4.hex,
-                'type':uuid.uuid4.hex}
+            'id': uuid.uuid4().hex,
+            'policy': uuid.uuid4().hex,
+            'type': uuid.uuid4().hex,
+            'endpoint_id': uuid.uuid4().hex,
+        }
 
     def assertEqualPolicies(self, a, b):
         self.assertEqual(a['id'], b['id'])
