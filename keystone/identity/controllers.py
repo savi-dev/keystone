@@ -37,7 +37,6 @@ class Tenant(controller.V2Controller):
         if 'name' in context['query_string']:
             return self.get_tenant_by_name(
                 context, context['query_string'].get('name'))
-
         self.assert_admin(context)
         tenant_refs = self.identity_api.get_tenants(context)
         params = {

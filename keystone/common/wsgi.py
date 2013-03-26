@@ -242,7 +242,8 @@ class Application(BaseApplication):
                      for (k, v) in d.iteritems()])
 
     def assert_admin(self, context, target={}):
-#        if not context['is_admin']:
+        if context['is_admin']:
+           return
         try:
             user_token_ref = self.token_api.get_token(
                 context=context, token_id=context['token_id'])
