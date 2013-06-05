@@ -28,6 +28,7 @@ from keystone.common import logging
 from keystone import config
 from keystone.openstack.common import jsonutils
 
+LOG = logging.getLogger(__name__)
 
 CONF = config.CONF
 
@@ -77,10 +78,10 @@ class DictBase(object):
     @classmethod
     def from_dict(cls, d):
         new_d = d.copy()
-
         new_d['extra'] = dict((k, new_d.pop(k)) for k in d.iterkeys()
                               if k not in cls.attributes and k != 'extra')
-
+        LOG.debug("RRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
+        LOG.debug("old data %s and new %s" % (d,new_d))
         return cls(**new_d)
 
     def to_dict(self, include_extra_dict=False):
