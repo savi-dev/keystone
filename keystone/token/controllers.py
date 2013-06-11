@@ -91,7 +91,7 @@ class Auth(controller.V2Controller):
             raise exception.Unauthorized(msg)
         
         tenant_name = auth.get('tenantName',None)
-        service = auth.get('service',None)
+        service_type = auth.get('service',None)
         
         if tenant_ref:
             catalog_ref = self.catalog_api.get_catalog(
@@ -115,16 +115,16 @@ class Auth(controller.V2Controller):
         token_data['access']['serviceCatalog'] = service_catalog
         
         policy_ref = []
-        if tenant_name == 'service':
-            LOG.debug("RRRRRRRRRRRRRRRRRRRRRRRRRRRR")
-            token_data['access']['policy']= policy_ref
+        
+        if tenant_name == 'service' and service_type is not None:
             services = self.catalog_api.list_services(context)
             for service in services:
-                LOG.debug("rrrr %s" % service)
-                if service['type'] == 'compute':
+                if service['type'] == service_type:
                     policy = self.policy_api.get_service_policy(context, service['id'])
                     if policy:
-                        policy_ref.append({'service':service['type'],'id':service['id'],'timestamp':policy['timestamp']})
+                        policy_ref.append({'service':service['type'],'id':policy['id'],'timestamp':policy['timestamp']})
+            token_data['access']['policy']= policy_ref
+            
         if config.CONF.signing.token_format == 'UUID':
             token_id = uuid.uuid4().hex
         elif config.CONF.signing.token_format == 'PKI':
