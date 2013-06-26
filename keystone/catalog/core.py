@@ -20,6 +20,7 @@
 from keystone.common import dependency
 from keystone.common import logging
 from keystone.common import manager
+from keystone.common.cached import cache
 from keystone import config
 from keystone import exception
 
@@ -70,19 +71,22 @@ class Manager(manager.Manager):
         except exception.NotFound:
             raise exception.ServiceNotFound(service_id=service_id)
 
+    @cache.revokeAll(prefix='catalog')
     def delete_service(self, context, service_id):
         try:
             return self.driver.delete_service(service_id)
         except exception.NotFound:
             raise exception.ServiceNotFound(service_id=service_id)
 
+    @cache.revokeAll(prefix='catalog')
     def create_endpoint(self, context, endpoint_id, endpoint_ref):
         try:
             return self.driver.create_endpoint(endpoint_id, endpoint_ref)
         except exception.NotFound:
             service_id = endpoint_ref.get('service_id')
             raise exception.ServiceNotFound(service_id=service_id)
-
+  
+    @cache.revokeAll(prefix='catalog')
     def delete_endpoint(self, context, endpoint_id):
         try:
             return self.driver.delete_endpoint(endpoint_id)
@@ -95,6 +99,7 @@ class Manager(manager.Manager):
         except exception.NotFound:
             raise exception.EndpointNotFound(endpoint_id=endpoint_id)
 
+    @cache(prefix='catalog',key='tenant_id')
     def get_catalog(self, context, user_id, tenant_id, metadata=None):
         try:
             return self.driver.get_catalog(user_id, tenant_id, metadata)

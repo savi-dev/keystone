@@ -68,6 +68,9 @@
 # the timeout before idle sql connections are reaped
 # idle_timeout = 200
 
+[memcached]
+memcached_server=localhost:11211
+
 [identity]
 # driver = keystone.identity.backends.sql.Identity
 
