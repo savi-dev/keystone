@@ -19,8 +19,12 @@ import datetime
 from keystone.common import controller
 from keystone import exception
 from keystone.common import logging
+from keystone.common import dependency
+
 
 LOG = logging.getLogger(__name__)
+
+@dependency.requires('catalog_api')
 class Policy(controller.V2Controller):
 
     def create_policy(self, context, policy):
@@ -47,9 +51,9 @@ class Policy(controller.V2Controller):
         ref = self.policy_api.get_policy(context, policy_id)
         return {'policy':ref}
 
-    def get_role_policy(self, context, role_id):
+    def get_service_policy(self, context, role_id):
         self.assert_admin(context)
-        ref = self.policy_api.get_role_policy(context, role_id)
+        ref = self.policy_api.get_service_policy(context, role_id)
         return {'policy':ref}
 
     def list_policies(self, context):

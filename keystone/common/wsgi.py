@@ -241,7 +241,7 @@ class Application(BaseApplication):
         return dict([(self._normalize_arg(k), v)
                      for (k, v) in d.iteritems()])
 
-    def assert_admin(self, context, target={}):
+    def assert_admin(self, context, action='admin_required', target={}):
         if context['is_admin']:
            return
         try:
@@ -271,8 +271,8 @@ class Application(BaseApplication):
         # NOTE(vish): this is pretty inefficient
         creds['roles'] = [self.identity_api.get_role(context, role)['name']
                           for role in creds.get('roles', [])]
-        # Accept either is_admin or the admin role
-        self.policy_api.enforce(context, creds, 'admin_required', target)
+        LOG.debug("Enforcing for context=%s -- action=%s" % (context, action))
+        self.policy_api.enforce(context, creds, action, target)
 
 
 class Middleware(Application):

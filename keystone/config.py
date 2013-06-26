@@ -175,6 +175,10 @@ register_str('portal', group='email', default=None)
 register_str('connection', group='sql', default='sqlite:///keystone.db')
 register_int('idle_timeout', group='sql', default=200)
 
+#memcache
+register_str('memcached_server', group='memcached', default='asdsadsa')
+
+
 
 register_str('driver', group='catalog',
              default='keystone.catalog.backends.sql.Catalog')

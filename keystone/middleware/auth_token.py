@@ -293,7 +293,6 @@ class AuthProtocol(object):
 
     def _remove_auth_headers(self, env):
         """Remove headers so a user can't fake authentication.
-
         :param env: wsgi request environment
 
         """

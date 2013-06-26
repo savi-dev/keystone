@@ -44,7 +44,8 @@ class Auth(controller.V2Controller):
                         "username":"test_user",
                         "password":"mypass"
                     },
-                    "tenantName":"customer-x"
+                    "tenantName":"customer-x",
+                    "service":"service-name"
                 }
             }
 
@@ -88,7 +89,10 @@ class Auth(controller.V2Controller):
             msg = 'Tenant is disabled: %s' % tenant_ref['id']
             LOG.warning(msg)
             raise exception.Unauthorized(msg)
-
+        
+        tenant_name = auth.get('tenantName',None)
+        service_type = auth.get('service',None)
+        
         if tenant_ref:
             catalog_ref = self.catalog_api.get_catalog(
                 context=context,
@@ -99,12 +103,8 @@ class Auth(controller.V2Controller):
             catalog_ref = self.catalog_api.get_realms(context)
 
         auth_token_data['id'] = 'placeholder'
-
+       
         roles_ref = []
-        policy_ref = []
-        for policy in self.policy_api.list_policies(context):
-            service = self.catalog_api.get_service(context, policy['service_id'])
-            policy_ref.append({'service':service['type'],'timestamp':policy['timestamp']})
         for role_id in metadata_ref.get('roles', []):
             role_ref = self.identity_api.get_role(context, role_id)
             roles_ref.append(dict(name=role_ref['name']))
@@ -113,7 +113,18 @@ class Auth(controller.V2Controller):
 
         service_catalog = Auth.format_catalog(catalog_ref)
         token_data['access']['serviceCatalog'] = service_catalog
-        token_data['access']['policy']= policy_ref
+        
+        policy_ref = []
+        
+        if tenant_name == 'service' and service_type is not None:
+            services = self.catalog_api.list_services(context)
+            for service in services:
+                if service['type'] == service_type:
+                    policy = self.policy_api.get_service_policy(context, service['id'])
+                    if policy:
+                        policy_ref.append({'service':service['type'],'id':policy['id'],'timestamp':policy['timestamp']})
+            token_data['access']['policy']= policy_ref
+            
         if config.CONF.signing.token_format == 'UUID':
             token_id = uuid.uuid4().hex
         elif config.CONF.signing.token_format == 'PKI':
@@ -373,10 +384,6 @@ class Auth(controller.V2Controller):
         # fill out the roles in the metadata
         metadata_ref = token_ref['metadata']
         roles_ref = []
-        policy_ref = []
-        for policy in self.policy_api.list_policies(context):
-            service = self.catalog_api.get_service(context, policy['service_id'])
-            policy_ref.append({'service':service['type'],'timestamp':policy['timestamp']})
         for role_id in metadata_ref.get('roles', []):
             role_ref = self.identity_api.get_role(context, role_id)
             roles_ref.append(role_ref)
@@ -463,8 +470,6 @@ class Auth(controller.V2Controller):
             o['access']['token']['tenant'] = token_ref['tenant']
         if catalog_ref is not None:
             o['access']['serviceCatalog'] = Auth.format_catalog(catalog_ref)
-        if policy_ref is None:
-            o['access']['policy'] = policy_ref
         if metadata_ref:
             if 'is_admin' in metadata_ref:
                 o['access']['metadata'] = {'is_admin':

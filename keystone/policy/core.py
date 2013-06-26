@@ -45,7 +45,7 @@ class Manager(manager.Manager):
 
 
     def get_service_policy(self, context, service_id):
-        return self.driver.get_role_policy(service_id)
+        return self.driver.get_service_policy(service_id)
 
     def update_policy(self, context, policy_id, policy):
         if 'id' in policy and policy_id != policy['id']:
