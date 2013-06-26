@@ -21,7 +21,9 @@ import urllib
 import urllib2
 
 from keystone.openstack.common import jsonutils
+from keystone.common import logging
 
+LOG=logging.getLogger(__name__)
 
 class NotAuthorized(Exception):
     pass

@@ -28,21 +28,21 @@ INTERFACES = ['public', 'internal', 'admin']
 @dependency.requires('catalog_api')
 class Service(controller.V2Controller):
     def get_services(self, context):
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:list_services')
         service_list = self.catalog_api.list_services(context)
         return {'OS-KSADM:services': service_list}
 
     def get_service(self, context, service_id):
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:get_service')
         service_ref = self.catalog_api.get_service(context, service_id)
         return {'OS-KSADM:service': service_ref}
 
     def delete_service(self, context, service_id):
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:delete_service')
         self.catalog_api.delete_service(context, service_id)
 
     def create_service(self, context, OS_KSADM_service):
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:create_service')
         service_id = uuid.uuid4().hex
         service_ref = OS_KSADM_service.copy()
         service_ref['id'] = service_id
@@ -55,7 +55,7 @@ class Service(controller.V2Controller):
 class Endpoint(controller.V2Controller):
     def get_endpoints(self, context):
         """Merge matching v3 endpoint refs into legacy refs."""
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:list_endpoints')
         legacy_endpoints = {}
         for endpoint in self.catalog_api.list_endpoints(context):
             if not endpoint['legacy_endpoint_id']:
@@ -79,7 +79,7 @@ class Endpoint(controller.V2Controller):
 
     def create_endpoint(self, context, endpoint):
         """Create three v3 endpoint refs based on a legacy ref."""
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:create_endpoint')
 
         legacy_endpoint_ref = endpoint.copy()
 
@@ -100,7 +100,7 @@ class Endpoint(controller.V2Controller):
 
     def delete_endpoint(self, context, endpoint_id):
         """Delete up to three v3 endpoint refs based on a legacy ref ID."""
-        self.assert_admin(context)
+        self.assert_admin(context,action='identity:delete_endpoint')
 
         deleted_at_least_one = False
         for endpoint in self.catalog_api.list_endpoints(context):
