@@ -78,6 +78,8 @@ class CacheRouter(object):
                except KeyError:
                   msg =  _('There is no argument %s in function %s' % (key,f.__name__))
                   raise exception.UnexpectedError(msg)
+               if key_id is None:
+                  key_id=prefix
                if self.client:
                   resp = self.client.get(self._prefix_id(prefix, key_id))
                   if not resp:
@@ -100,12 +102,12 @@ class CacheRouter(object):
         return '%s-%s' % (prefix, key.encode('utf-8'))
 
     def _add_revocation_items(self, prefix, key):
-      if not self.client.append(self._get_revocation_key(prefix), ',%s' % key):
-         if not self.client.add(self._get_revocation_key(prefix), key):
-            if not self.client.append(self._get_revocation_key(prefix), key):
+      if not self.client.append(self._get_revocation_key(prefix), ',%s' % key.encode('utf-8')):
+         if not self.client.add(self._get_revocation_key(prefix), key.encode('utf-8')):
+            if not self.client.append(self._get_revocation_key(prefix), key.encode('utf-8')):
                msg = _('Unable to add token to revocation list.')
                raise exception.UnexpectedError(msg)
-
+    
     def _get_revocation_key(self, prefix):
         return "%s_%s" % (self.revocation_key,prefix)
   
