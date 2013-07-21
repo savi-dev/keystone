@@ -319,14 +319,14 @@ def setup_remote_pydev_debug():
             LOG.exception(_(error_msg))
             raise
 def mail(to, subject, text):
-   txt = text + CONF.email.portal
+   #txt = text + CONF.email.portal
    msg = MIMEMultipart()
    
    msg['From'] = CONF.email.user
    msg['To'] = to
    msg['Subject'] = subject
 
-   msg.attach(MIMEText(txt))
+   msg.attach(MIMEText(text))
    mailServer = smtplib.SMTP(CONF.email.host, CONF.email.port)
    mailServer.ehlo()
    mailServer.starttls()

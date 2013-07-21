@@ -198,7 +198,6 @@ class User(controller.V2Controller):
                 Username: %s
                 Password: %s
             
-                To login to My SAVI Account and change your password, click here:
                 """ % (user['name'],user['password'])
             mail(user['email'], "SAVI Account", msg)
         return {'user': new_user_ref}
