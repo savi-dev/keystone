@@ -15,6 +15,7 @@
 # under the License.
 
 """SQL backends for the various services."""
+import functools
 
 import sqlalchemy as sql
 import sqlalchemy.engine.url
@@ -49,6 +50,18 @@ NotFound = sql.orm.exc.NoResultFound
 Boolean = sql.Boolean
 Text = sql.Text
 
+
+def handle_conflicts(type='object'):
+    """Converts IntegrityError into HTTP 409 Conflict."""
+    def decorator(method):
+        @functools.wraps(method)
+        def wrapper(*args, **kwargs):
+            try:
+                return method(*args, **kwargs)
+            except sql.IntegrityError as e:
+                raise exception.Conflict(type=type, details=str(e.orig))
+        return wrapper
+    return decorator
 
 def set_global_engine(engine):
     global GLOBAL_ENGINE
