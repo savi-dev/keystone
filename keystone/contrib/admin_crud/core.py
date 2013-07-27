@@ -16,8 +16,8 @@
 from keystone import catalog
 from keystone.common import wsgi
 from keystone import identity
-from keystone.policy.controllers import Policy
-
+from keystone import policy
+from keystone import delegate
 
 class CrudExtension(wsgi.ExtensionRouter):
     """Previously known as the OS-KSADM extension.
@@ -32,9 +32,10 @@ class CrudExtension(wsgi.ExtensionRouter):
         role_controller = identity.controllers.Role()
         service_controller = catalog.controllers.Service()
         endpoint_controller = catalog.controllers.Endpoint()
-
-        policy_controller = Policy()
+        policy_controller = policy.controller.Policy()
+        delegate_controller = delegate.controller.Delegate()
 #
+
         # Policy Operations
         mapper.connect('/policies',
                        controller=policy_controller,
@@ -57,6 +58,42 @@ class CrudExtension(wsgi.ExtensionRouter):
                        action='delete_policy',
                        conditions=dict(method=['DELETE']))
 
+
+        # Delegation Operation
+        mapper.connect('/delegate/delegates',
+                   controller=delegate_controller,
+                   action='create_delegate',
+                   conditions=dict(method=['POST']))
+
+        mapper.connect('/delegate/delegates',
+                   controller=delegate_controller,
+                   action='list_delegates',
+                   conditions=dict(method=['GET']))
+
+        mapper.connect('/delegate/delegates/{delegate_id}',
+                   controller=delegate_controller,
+                   action='delete_delegate',
+                   conditions=dict(method=['DELETE']))
+
+        mapper.connect('/delegate/delegates/{delegate_id}',
+                   controller=delegate_controller,
+                   action='get_delegate',
+                   conditions=dict(method=['GET']))
+
+        mapper.connect('/delegate/delegates/{delegate_id}/roles',
+                   controller=delegate_controller,
+                   action='list_roles_for_delegate',
+                   conditions=dict(method=['GET']))
+
+        mapper.connect('/delegate/delegates/{delegate_id}/roles/{role_id}',
+                   controller=delegate_controller,
+                   action='check_role_for_delegate',
+                   conditions=dict(method=['HEAD']))
+
+        mapper.connect('/delegate/delegates/{delegate_id}/roles/{role_id}',
+                   controller=delegate_controller,
+                   action='get_role_for_delegate',
+                   conditions=dict(method=['GET']))
 
         # Tenant Operations
         mapper.connect(
