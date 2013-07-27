@@ -18,11 +18,11 @@ LOG = logging.getLogger(__name__)
 class Manager(manager.Manager):
 
     def __init__(self):
-        super(Manager, self).__init__(CONF.trust.driver)
+        super(Manager, self).__init__(CONF.delegate.driver)
 
 
 class Driver(object):
-    def create_trust(self, trust_id, trust, roles):
+    def create_delegate(self, delegate_id, delegate, roles):
         raise exception.NotImplemented()
 
     def get_delegate(self, delegate_id):

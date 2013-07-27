@@ -192,7 +192,8 @@ register_str('driver', group='ec2',
              default='keystone.contrib.ec2.backends.kvs.Ec2')
 register_str('driver', group='stats',
              default='keystone.contrib.stats.backends.kvs.Stats')
-
+register_str(
+        'driver', group='delegate', default='keystone.delegate.backends.sql.Delegate')
 
 #ldap
 register_str('url', group='ldap', default='ldap://localhost')
@@ -231,6 +232,9 @@ register_list('tenant_attribute_ignore', group='ldap', default='')
 register_bool('tenant_allow_create', group='ldap', default=True)
 register_bool('tenant_allow_update', group='ldap', default=True)
 register_bool('tenant_allow_delete', group='ldap', default=True)
+
+# Delegation
+register_bool('enabled', group='delegate', default=True)
 
 register_str('role_tree_dn', group='ldap', default=None)
 register_str('role_filter', group='ldap', default=None)
