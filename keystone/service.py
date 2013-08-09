@@ -24,7 +24,7 @@ from keystone import identity
 from keystone import policy
 from keystone import routers
 from keystone import token
-
+from keystone import delegate
 
 LOG = logging.getLogger(__name__)
 DRIVERS = dict(
@@ -32,7 +32,8 @@ DRIVERS = dict(
     ec2_api=ec2.Manager(),
     identity_api=identity.Manager(),
     policy_api=policy.Manager(),
-    token_api=token.Manager())
+    token_api=token.Manager(),
+    delegate_api=delegate.Manager())
 
 
 @logging.fail_gracefully

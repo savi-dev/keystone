@@ -10,8 +10,8 @@ from keystone.common import dependency
 
 LOG = logging.getLogger(__name__)
 
-@dependency.requires('identity_api', 'delegation_api', 'token_api')
-class Delegation(controller.V2Controller):
+@dependency.requires('delegate_api')
+class Delegate(controller.V2Controller):
 
     def create_delegate(self, context, delegate=None):
         """
@@ -55,7 +55,7 @@ class Delegation(controller.V2Controller):
         except KeyError as e:
             raise exception.ValidationError(attribute=e.args[0],
                                             target='delegate')
-            
+
     def _get_user_id(self, context):
         if 'token_id' in context:
             token_id = context['token_id']
@@ -78,7 +78,7 @@ class Delegation(controller.V2Controller):
         self._fill_in_roles(context, delegate,
                             self.identity_api.list_roles())
         return {'delegate': delegate}
-    
+
     def _fill_in_roles(self, context, delegate, global_roles):
         if delegate.get('expires_at') is not None:
             delegate['expires_at'] = (timeutils.isotime
@@ -170,7 +170,7 @@ class Delegation(controller.V2Controller):
         _admin_delegator_delegatee_only(context, delegate, user_id)
         return {'roles': delegate['roles'],
                 'links': delegate['roles_links']}
-        
+
     def check_role_for_delegate(self, context, delegate_id, role_id):
         """Checks if a role has been assigned to a delegate."""
         delegate = self.delegate_api.get_delegate(delegate_id)
@@ -182,7 +182,7 @@ class Delegation(controller.V2Controller):
                           if x['id'] == role_id]
         if not matching_roles:
             raise exception.RoleNotFound(role_id=role_id)
-        
+
     def get_role_for_delegate(self, context, delegate_id, role_id):
         """Checks if a role has been assigned to a delegate."""
         delegate = self.delegate_api.get_delegate(delegate_id)
@@ -208,8 +208,8 @@ class Delegation(controller.V2Controller):
 def _delegator_only(context, delegate, user_id):
     if user_id != delegate.get('delegator_user_id'):
         raise exception.Forbidden()
-    
-    
+
+
 def _admin_delegator_delegatee_only(context, delegate, user_id):
     if (user_id != delegate.get('delegator_user_id') and
             user_id != delegate.get('delegotor_user_id') and

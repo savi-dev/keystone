@@ -32,8 +32,8 @@ class CrudExtension(wsgi.ExtensionRouter):
         role_controller = identity.controllers.Role()
         service_controller = catalog.controllers.Service()
         endpoint_controller = catalog.controllers.Endpoint()
-        policy_controller = policy.controller.Policy()
-        delegate_controller = delegate.controller.Delegate()
+        policy_controller = policy.controllers.Policy()
+        delegate_controller = delegate.controllers.Delegate()
 #
 
         # Policy Operations
@@ -84,7 +84,7 @@ class CrudExtension(wsgi.ExtensionRouter):
                    controller=delegate_controller,
                    action='list_roles_for_delegate',
                    conditions=dict(method=['GET']))
-
+#
         mapper.connect('/delegate/delegates/{delegate_id}/roles/{role_id}',
                    controller=delegate_controller,
                    action='check_role_for_delegate',
