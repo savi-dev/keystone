@@ -89,6 +89,9 @@ memcached_server=localhost:11211
 # Amount of time a token should remain valid (in seconds)
 # expiration = 86400
 
+[delegate]
+# driver = keystone.delegate.backends.sql.Delegate
+
 [policy]
 # driver = keystone.policy.backends.sql.Policy
 
