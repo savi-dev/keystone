@@ -13,7 +13,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
+from webob import Response
+import logging
 from keystone.common import serializer
 from keystone.common import wsgi
 from keystone import config
@@ -22,7 +23,7 @@ from keystone.openstack.common import jsonutils
 
 
 CONF = config.CONF
-
+LOG = logging.getLogger(__name__)
 
 # Header used to transmit the auth token
 AUTH_TOKEN_HEADER = 'X-Auth-Token'
@@ -42,6 +43,14 @@ class TokenAuthMiddleware(wsgi.Middleware):
         context = request.environ.get(CONTEXT_ENV, {})
         context['token_id'] = token
         request.environ[CONTEXT_ENV] = context
+
+class HealthCheckMiddleware(wsgi.Middleware):
+    """
+       Health check middleware for Monitoring
+    """
+    def process_request(self, request):
+        if request.path == '/v2.0/healthcheck':
+           return Response(request=request, body="OK", content_type="text/plain")
 
 
 class AdminTokenAuthMiddleware(wsgi.Middleware):

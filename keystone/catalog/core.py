@@ -99,7 +99,7 @@ class Manager(manager.Manager):
         except exception.NotFound:
             raise exception.EndpointNotFound(endpoint_id=endpoint_id)
 
-    @cache(prefix='catalog',key='tenant_id')
+#    @cache(prefix='catalog',key='tenant_id')
     def get_catalog(self, context, user_id, tenant_id, metadata=None):
         try:
             return self.driver.get_catalog(user_id, tenant_id, metadata)
