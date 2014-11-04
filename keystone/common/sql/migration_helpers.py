@@ -25,7 +25,6 @@ import sqlalchemy
 
 from keystone.common import sql
 from keystone.common.sql import migrate_repo
-from keystone import config
 from keystone import contrib
 from keystone import exception
 from keystone.i18n import _
@@ -33,20 +32,7 @@ from keystone.openstack.common import importutils
 from keystone.openstack.common import jsonutils
 
 
-CONF = config.CONF
 DEFAULT_EXTENSIONS = ['revoke']
-
-
-def get_default_domain():
-    # Return the reference used for the default domain structure during
-    # sql migrations.
-    return {
-        'id': CONF.identity.default_domain_id,
-        'name': 'Default',
-        'enabled': True,
-        'extra': jsonutils.dumps({'description': 'Owns users and tenants '
-                                                 '(i.e. projects) available '
-                                                 'on Identity API v2.'})}
 
 
 #  Different RDBMSs use different schemes for naming the Foreign Key
@@ -153,11 +139,9 @@ def _fix_migration_37(engine):
 
 def _sync_common_repo(version):
     abs_path = find_migrate_repo()
-    init_version = migrate_repo.DB_INIT_VERSION
     engine = sql.get_engine()
     try:
-        migration.db_sync(engine, abs_path, version=version,
-                          init_version=init_version)
+        migration.db_sync(engine, abs_path, version=version)
     except ValueError:
         # NOTE(morganfainberg): ValueError is raised from the sanity check (
         # verifies that tables are utf8 under mysql). The region table was not
@@ -169,14 +153,12 @@ def _sync_common_repo(version):
             _fix_migration_37(engine)
             # Try the migration a second time now that we've done the
             # un-wedge work.
-            migration.db_sync(engine, abs_path, version=version,
-                              init_version=init_version)
+            migration.db_sync(engine, abs_path, version=version)
         else:
             raise
 
 
 def _sync_extension_repo(extension, version):
-    init_version = 0
     try:
         package_name = '.'.join((contrib.__name__, extension))
         package = importutils.import_module(package_name)
@@ -195,8 +177,7 @@ def _sync_extension_repo(extension, version):
     except exception.MigrationNotProvided as e:
         print(e)
         sys.exit(1)
-    migration.db_sync(sql.get_engine(), abs_path, version=version,
-                      init_version=init_version)
+    migration.db_sync(sql.get_engine(), abs_path, version=version)
 
 
 def sync_database_to_version(extension=None, version=None):
@@ -215,7 +196,6 @@ def get_db_version(extension=None):
     if not extension:
         return migration.db_version(sql.get_engine(), find_migrate_repo(),
                                     migrate_repo.DB_INIT_VERSION)
-
     try:
         package_name = '.'.join((contrib.__name__, extension))
         package = importutils.import_module(package_name)
