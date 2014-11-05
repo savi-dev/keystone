@@ -29,6 +29,11 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     domain_table = sql.Table('domain', meta, autoload=True)
+    domain_table.create_column(
+        sql.Column('enabled',
+                   sql.Boolean,
+                   nullable=False,
+                   default=True))
 
     domain = {
         'id': CONF.identity.default_domain_id,
@@ -49,7 +54,13 @@ def downgrade(migrate_engine):
     meta = sql.MetaData()
     meta.bind = migrate_engine
 
-    sql.Table('domain', meta, autoload=True)
+    domain_table = sql.Table('domain', meta, autoload=True)
+    domain_table.drop_column(
+        sql.Column('enabled',
+                   sql.Boolean,
+                   nullable=False,
+                   default=True))
+
     session = orm.sessionmaker(bind=migrate_engine)()
     session.execute(
         'DELETE FROM domain WHERE id=:id',
