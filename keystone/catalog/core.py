@@ -153,6 +153,7 @@ class Manager(manager.Manager):
         return self.driver.update_service(service_id, service_ref)
 
     @notifications.deleted(_SERVICE, public=False)
+    @cache.revoke('catalog')
     def delete_service(self, service_id):
         try:
             endpoints = self.list_endpoints()
@@ -170,6 +171,7 @@ class Manager(manager.Manager):
         return self.driver.list_services(hints or driver_hints.Hints())
 
     @notifications.created(_ENDPOINT, public=False)
+    @cache.revoke('catalog')
     def create_endpoint(self, endpoint_id, endpoint_ref):
         try:
             return self.driver.create_endpoint(endpoint_id, endpoint_ref)
@@ -185,6 +187,7 @@ class Manager(manager.Manager):
         return self.driver.update_endpoint(endpoint_id, endpoint_ref)
 
     @notifications.deleted(_ENDPOINT, public=False)
+    @cache.revoke('catalog')
     def delete_endpoint(self, endpoint_id):
         try:
             ret = self.driver.delete_endpoint(endpoint_id)
@@ -205,6 +208,10 @@ class Manager(manager.Manager):
     def list_endpoints(self, hints=None):
         return self.driver.list_endpoints(hints or driver_hints.Hints())
 
+    @cache.on_arguments(should_cache_fn=SHOULD_CACHE,
+                        expiration_time=EXPIRATION_TIME,
+                        revocation_key='catalog',
+                        hint={'argument': 'tenant_id'})
     def get_catalog(self, user_id, tenant_id, metadata=None):
         try:
             return self.driver.get_catalog(user_id, tenant_id, metadata)

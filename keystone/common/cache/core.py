@@ -14,6 +14,8 @@
 
 """Keystone Caching Layer Implementation."""
 
+import inspect
+
 import dogpile.cache
 from dogpile.cache import proxy
 from dogpile.cache import util
@@ -206,12 +208,35 @@ def key_generate_to_str(s):
         return s.encode('utf-8')
 
 
-def function_key_generator(namespace, fn, to_str=key_generate_to_str):
+def function_key_generator(namespace, fn, **kwargs):
     # NOTE(morganfainberg): This wraps dogpile.cache's default
     # function_key_generator to change the default to_str mechanism.
-    return util.function_key_generator(namespace, fn, to_str=to_str)
+    to_str = kwargs.pop('to_str', key_generate_to_str)
+    hint = kwargs.pop('hint', None)
+    if hint is None:
+        return util.function_key_generator(namespace, fn, to_str=to_str)
+
+    if namespace is None:
+        namespace = '%s:%s' % (fn.__module__, fn.__name__)
+    else:
+        namespace = '%s:%s|%s' % (fn.__module__, fn.__name__, namespace)
+
+    argument_name = hint['argument']
+    idx = None
+    spec = inspect.getargspec(fn)
+    if spec[0] and argument_name in spec[0]:
+        idx = spec[0].index(argument_name)
+
+    def generate_key(*args, **kw):
+        if idx:
+            return namespace + "|" + to_str(args[idx])
+        else:
+            raise ValueError(_("function does not contain argument %s") %
+                             argument_name)
+    return generate_key
 
 
 REGION = dogpile.cache.make_region(
     function_key_generator=function_key_generator)
 on_arguments = REGION.cache_on_arguments
+revoke = REGION.revoke
