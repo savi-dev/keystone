@@ -1541,7 +1541,7 @@ enabled=true
 
 # Token persistence backend driver. (string value)
 #driver=keystone.token.persistence.backends.sql.Token
-driver=keystone.token.backends.memcache.Token
+driver=keystone.token.persistence.backends.memcache_pool.Token
 
 # Toggle for token system caching. This has no effect unless
 # global caching is enabled. (boolean value)
