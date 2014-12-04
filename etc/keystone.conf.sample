@@ -550,6 +550,7 @@ enabled=true
 # (dogpile.cache.memcache and keystone.cache.memcache_pool
 # backends only) (integer value)
 #memcache_socket_timeout=3
+memcache_socket_timeout=1
 
 # Max total number of open connections to every memcached
 # server. (keystone.cache.memcache_pool backend only) (integer
@@ -1253,6 +1254,7 @@ enabled=true
 # by the key value store system (e.g. token pooled memcached
 # persistence backend). (integer value)
 #socket_timeout=3
+socket_timeout=1
 
 # Max total number of open connections to every memcached
 # server. This is used by the key value store system (e.g.
