@@ -19,6 +19,8 @@
 import urllib
 import urlparse
 import uuid
+import os
+import sys
 
 from keystone import config
 from keystone.common import controller
@@ -209,6 +211,14 @@ class User(controller.V2Controller):
 
         # If the password was changed or the user was disabled we clear tokens
         if user.get('password') or not user.get('enabled', True):
+            try:
+                if user.get('password'):
+                    cmd = "/home/savi/savi-config/iam/keystone/change_client_password.sh %s %s" % (user_ref.get('name'), user.get('password'))
+                    os.system(cmd)
+            except:
+                LOG.warning("Unexpected error:", sys.exc_info()[0])
+                LOG.warning('User %s, %s status has changed, but canty update clients ' % (user_ref.get('name', 'no_name'), user_id))
+                pass
             try:
                 for token_id in self.token_api.list_tokens(context, user_id):
                     self.token_api.delete_token(context, token_id)
